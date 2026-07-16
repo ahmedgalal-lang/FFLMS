@@ -1,0 +1,342 @@
+openapi: 3.1.0
+info:
+  title: LMS Platform API
+  version: 0.1.0
+  description: >
+    REST contract for the LMS Route Handlers (src/app/api/**). Form-driven
+    mutations may also be exposed as Next.js Server Actions sharing the same Zod
+    schemas. All non-public paths require a session cookie; authorization is
+    enforced server-side per the role matrix in contracts/README.md.
+servers:
+  - url: /api
+tags:
+  - name: auth
+  - name: courses
+  - name: enrollments
+  - name: learning
+  - name: quizzes
+  - name: assignments
+  - name: gradebook
+  - name: certificates
+  - name: admin
+  - name: uploads
+  - name: notifications
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: authjs.session-token
+  schemas:
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+        code: { type: string }
+        fieldErrors:
+          type: object
+          additionalProperties: { type: array, items: { type: string } }
+      required: [error]
+    Page:
+      type: object
+      properties:
+        page: { type: integer }
+        pageSize: { type: integer }
+        total: { type: integer }
+    Course:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        slug: { type: string }
+        summary: { type: string }
+        status:
+          type: string
+          enum: [DRAFT, IN_REVIEW, PUBLISHED, ARCHIVED]
+        categoryId: { type: string, nullable: true }
+        instructorId: { type: string }
+        coverImageUrl: { type: string, nullable: true }
+    CourseInput:
+      type: object
+      required: [title, summary, description]
+      properties:
+        title: { type: string, minLength: 3, maxLength: 160 }
+        summary: { type: string, maxLength: 300 }
+        description: { type: string }
+        categoryId: { type: string, nullable: true }
+        coverImageUrl: { type: string, nullable: true }
+    Enrollment:
+      type: object
+      properties:
+        id: { type: string }
+        courseId: { type: string }
+        studentId: { type: string }
+        status: { type: string, enum: [ACTIVE, COMPLETED, CANCELLED] }
+        progressPercent: { type: integer }
+    QuizAttemptResult:
+      type: object
+      properties:
+        attemptId: { type: string }
+        score: { type: integer }
+        passed: { type: boolean }
+        attemptNumber: { type: integer }
+    CertificateVerification:
+      type: object
+      properties:
+        valid: { type: boolean }
+        holderName: { type: string, nullable: true }
+        courseTitle: { type: string, nullable: true }
+        issuedAt: { type: string, format: date-time, nullable: true }
+        revoked: { type: boolean }
+    PresignedUpload:
+      type: object
+      properties:
+        uploadUrl: { type: string, format: uri }
+        objectKey: { type: string }
+        expiresAt: { type: string, format: date-time }
+
+  responses:
+    Unauthorized:
+      description: Not authenticated
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Forbidden:
+      description: Authenticated but not permitted
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    BadRequest:
+      description: Validation failed
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    NotFound:
+      description: Resource not found (or hidden)
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+
+security:
+  - sessionCookie: []
+
+paths:
+  # ---- Catalog (public) ----
+  /courses:
+    get:
+      tags: [courses]
+      summary: List published courses (US2, FR-010)
+      security: []
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: category, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, default: 20, maximum: 100 } }
+      responses:
+        '200':
+          description: Page of courses
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Page'
+                  - type: object
+                    properties:
+                      items: { type: array, items: { $ref: '#/components/schemas/Course' } }
+    post:
+      tags: [courses]
+      summary: Create a course (US1, FR-005) — instructor/admin
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CourseInput' } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Course' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /courses/{slug}:
+    get:
+      tags: [courses]
+      summary: Public course detail (published) (FR-010)
+      security: []
+      parameters: [ { name: slug, in: path, required: true, schema: { type: string } } ]
+      responses:
+        '200': { description: Course, content: { application/json: { schema: { $ref: '#/components/schemas/Course' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /courses/{id}/modules:
+    post:
+      tags: [courses]
+      summary: Add/reorder module (US1, FR-006) — owner
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      responses:
+        '201': { description: Module created }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /courses/{id}/publish:
+    post:
+      tags: [courses]
+      summary: Publish course; enforces completeness gate (US1, FR-008)
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      responses:
+        '200': { description: Published }
+        '409':
+          description: Completeness rules not met
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /lessons/{id}:
+    put:
+      tags: [courses]
+      summary: Edit lesson content blocks (US1, FR-007) — owner
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      responses:
+        '200': { description: Updated }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  # ---- Enrollment & learning ----
+  /enrollments:
+    get:
+      tags: [enrollments]
+      summary: My Learning list (US2, FR-012)
+      responses:
+        '200': { description: Enrollments, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Enrollment' } } } } }
+    post:
+      tags: [enrollments]
+      summary: Enroll in a course; idempotent per (student,course) (US2, FR-011)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [courseId], properties: { courseId: { type: string } } } } }
+      responses:
+        '201': { description: Enrolled, content: { application/json: { schema: { $ref: '#/components/schemas/Enrollment' } } } }
+        '200': { description: Already enrolled (idempotent), content: { application/json: { schema: { $ref: '#/components/schemas/Enrollment' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /lessons/{id}/complete:
+    post:
+      tags: [learning]
+      summary: Mark lesson complete; recomputes progress (US2, FR-014)
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      requestBody:
+        content: { application/json: { schema: { type: object, properties: { lastPositionSec: { type: integer } } } } }
+      responses:
+        '200':
+          description: Progress updated
+          content: { application/json: { schema: { type: object, properties: { progressPercent: { type: integer }, courseCompleted: { type: boolean } } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  # ---- Quizzes ----
+  /quizzes/{id}/attempts:
+    post:
+      tags: [quizzes]
+      summary: Start a quiz attempt; enforces attempt limit & timer (US3, FR-019)
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      responses:
+        '201': { description: Attempt started (questions without correct answers) }
+        '409': { description: Attempt limit reached, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+  /quizzes/attempts/{attemptId}/submit:
+    post:
+      tags: [quizzes]
+      summary: Submit answers; auto-graded server-side (US3, FR-018)
+      parameters: [ { name: attemptId, in: path, required: true, schema: { type: string } } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                answers:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      questionId: { type: string }
+                      selectedOptionIds: { type: array, items: { type: string } }
+                      answerText: { type: string }
+      responses:
+        '200': { description: Result, content: { application/json: { schema: { $ref: '#/components/schemas/QuizAttemptResult' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  # ---- Assignments ----
+  /assignments/{id}/submissions:
+    post:
+      tags: [assignments]
+      summary: Submit an assignment; late flag computed server-side (US4, FR-020)
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      responses:
+        '201': { description: Submitted }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /submissions/{id}/grade:
+    post:
+      tags: [gradebook]
+      summary: Grade a submission with score + feedback (US4, FR-021) — instructor
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [score], properties: { score: { type: integer }, feedback: { type: string } } } } }
+      responses:
+        '200': { description: Graded; notifies student }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /courses/{id}/gradebook:
+    get:
+      tags: [gradebook]
+      summary: Aggregated per-student grades (US5, FR-022) — instructor/admin
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+      responses:
+        '200': { description: Gradebook page }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  # ---- Certificates ----
+  /certificates/verify/{code}:
+    get:
+      tags: [certificates]
+      summary: Public certificate verification (US5, FR-024, SC-008)
+      security: []
+      parameters: [ { name: code, in: path, required: true, schema: { type: string } } ]
+      responses:
+        '200': { description: Verification result, content: { application/json: { schema: { $ref: '#/components/schemas/CertificateVerification' } } } }
+
+  # ---- Admin ----
+  /admin/users/{id}/role:
+    put:
+      tags: [admin]
+      summary: Change a user's role (US6, FR-003) — admin; audited
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [role], properties: { role: { type: string, enum: [ADMIN, INSTRUCTOR, STUDENT] } } } } }
+      responses:
+        '200': { description: Updated }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /admin/courses/{id}/review:
+    post:
+      tags: [admin]
+      summary: Approve or reject a submitted course (US6, FR-025) — admin; audited
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [decision], properties: { decision: { type: string, enum: [APPROVE, REJECT] }, reason: { type: string } } } } }
+      responses:
+        '200': { description: Decision recorded }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  # ---- Uploads ----
+  /uploads:
+    post:
+      tags: [uploads]
+      summary: Issue a presigned upload URL; enforces size/type (FR-034)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [fileName, contentType, size], properties: { fileName: { type: string }, contentType: { type: string }, size: { type: integer } } } } }
+      responses:
+        '200': { description: Presigned URL, content: { application/json: { schema: { $ref: '#/components/schemas/PresignedUpload' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  # ---- Notifications ----
+  /notifications:
+    get:
+      tags: [notifications]
+      summary: List my notifications (US7, FR-028)
+      responses:
+        '200': { description: Notifications page }
