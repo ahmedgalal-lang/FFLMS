@@ -11,7 +11,17 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    {
+      name: "chromium",
+      use: {
+        ...devices["Desktop Chrome"],
+        // Use the environment's pre-installed Chromium when present, so we don't
+        // download a browser that may mismatch the pinned Playwright version.
+        launchOptions: process.env.PW_CHROMIUM_PATH
+          ? { executablePath: process.env.PW_CHROMIUM_PATH }
+          : {},
+      },
+    },
   ],
   webServer: process.env.E2E_BASE_URL
     ? undefined

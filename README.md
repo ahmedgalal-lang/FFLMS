@@ -10,8 +10,25 @@ users, approve courses, and view reports.
 
 ## Status
 
-📋 **Planning complete.** This repository currently contains the full
-spec-driven plan. Implementation follows `specs/001-lms-platform/tasks.md`.
+🚀 **MVP implemented.** The shippable MVP — **US1 (course authoring & publishing)**
+and **US2 (enroll & learn with progress)** — is built and verified. Remaining
+user stories (quizzes, assignments, gradebook/certificates UI, admin console,
+discussions, analytics) follow `specs/001-lms-platform/tasks.md`.
+
+**What works today**
+
+- Email/password + optional GitHub auth with role-based sessions (Admin /
+  Instructor / Student), enforced server-side via a central `authorize()` policy.
+- Instructor Studio: create courses, structure modules → lessons, add
+  video/text/file content blocks, and publish behind a completeness gate.
+- Public catalog with search/filter, course detail, idempotent enrollment.
+- Course player with lesson navigation, **mark complete**, resume point, live
+  progress, automatic course completion + certificate issuance.
+- **My Learning** dashboard with per-course progress.
+
+**Quality:** 37 unit/integration tests + 3 Playwright e2e journeys passing;
+`typecheck`, `lint`, and production `build` all green. See
+[`quickstart.md`](specs/001-lms-platform/quickstart.md) to run it locally.
 
 ## Spec-Driven Planning Artifacts
 

@@ -4,6 +4,19 @@ description: "Task list for LMS Platform implementation"
 
 # Tasks: LMS Platform
 
+> **Implementation status (MVP shipped).** Phases 1–4 (T001–T041) are
+> implemented and verified: project scaffold + tooling, the foundational
+> data/auth/authz layer, **US1 course authoring & publishing**, and **US2
+> enroll & learn with progress**. 37 unit/integration tests + 3 e2e journeys
+> pass; typecheck, lint, and build are green.
+>
+> Known simplifications carried as follow-ups: presigned uploads return a
+> deterministic URL (real S3 SigV4 signing plugs into `src/server/storage`);
+> drag-and-drop curriculum reordering has a service + API but the builder UI
+> uses add/delete ordering; password-reset and OAuth wiring are stubbed. Phases
+> 5–11 (quizzes, assignments, gradebook/certificate UI, admin, discussions,
+> analytics, polish) are not yet built.
+
 **Input**: Design documents from `/specs/001-lms-platform/`
 
 **Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/
