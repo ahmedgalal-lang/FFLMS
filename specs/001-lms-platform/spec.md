@@ -291,10 +291,16 @@ average scores, and per-lesson drop-off.
 - **FR-017**: Instructors MUST be able to create quizzes with question types
   (multiple choice, multiple select, true/false, short answer), per-question
   points, a passing threshold, optional time limit, and optional attempt limit.
-- **FR-018**: System MUST auto-grade objective question types and compute a
-  score and pass/fail result upon submission.
+- **FR-018**: System MUST auto-grade objective question types (multiple choice,
+  multiple select, true/false) and compute a score and pass/fail result upon
+  submission. Short-answer questions MUST be auto-graded by case-insensitive,
+  whitespace-trimmed exact match against the instructor-defined accepted
+  answer(s), and MUST be flagged for optional manual override by the instructor
+  before the score is final.
 - **FR-019**: System MUST enforce attempt limits and time limits, using server
-  time as authoritative, and MUST record each attempt.
+  time as authoritative, and MUST record each attempt. When multiple attempts
+  are allowed, the **highest-scoring** attempt is the attempt of record used for
+  grading and completion (configurable per quiz; default = highest).
 - **FR-020**: Instructors MUST be able to create assignments (instructions, due
   date, allowed submission types) and students MUST be able to submit text
   and/or files.
@@ -314,8 +320,9 @@ average scores, and per-lesson drop-off.
 
 - **FR-025**: Admins MUST be able to review, approve, reject, publish, and
   archive courses, and manage categories/taxonomy.
-- **FR-026**: Admins MUST be able to view organization-wide reports (users,
-  enrollments, completions).
+- **FR-026**: Admins MUST be able to view organization-wide reports spanning all
+  courses and users (totals and trends for users, enrollments, completions) —
+  distinct from, and complementary to, the single-course analytics of FR-030.
 
 **Communication**
 
@@ -329,9 +336,9 @@ average scores, and per-lesson drop-off.
 
 **Analytics**
 
-- **FR-030**: System MUST expose course analytics (enrollments, completion rate,
-  average scores, per-lesson progression) to the course's instructor and to
-  admins.
+- **FR-030**: System MUST expose single-course analytics (enrollments,
+  completion rate, average scores, per-lesson progression) to that course's
+  instructor and to admins.
 
 **Cross-cutting**
 
@@ -354,6 +361,8 @@ average scores, and per-lesson drop-off.
 - **Lesson**: An ordered learning unit within a module, carrying content blocks
   (video/text/file) and optionally an associated assessment; may be marked
   required for completion.
+- **ContentBlock**: A typed, ordered piece of lesson content (video embed, rich
+  text, or file attachment); a lesson may have several.
 - **Enrollment**: The relationship linking a student to a course, with status and
   timestamps; parent of that student's progress in the course.
 - **LessonProgress**: A record that a given enrollment has completed (or started)
@@ -372,6 +381,8 @@ average scores, and per-lesson drop-off.
   relevant resource.
 - **Announcement**: An instructor message broadcast to a course's enrolled
   students.
+- **AuditLog**: An immutable record of sensitive admin actions (role changes,
+  suspensions, course approvals/rejections) with actor, target, and timestamp.
 
 ## Success Criteria *(mandatory)*
 

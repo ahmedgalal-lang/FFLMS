@@ -37,8 +37,18 @@ considered locked. Check each item; note gaps as follow-ups.
 - [x] Accessibility/performance encoded as success criteria (SC-007) and
       constitution principles.
 
+## Resolved (analysis remediation, 2026-07-16)
+
+- [x] Quiz attempt scoring — **highest-scoring attempt of record**, per-quiz
+      configurable (FR-019).
+- [x] Short-answer grading — **normalized exact match + optional manual
+      override** (FR-018).
+- [x] Coverage gaps closed — self-profile task (T019a), load/scale test
+      (T086), search-latency assertion (T034a), certificate-trigger test
+      (T057a), category test (T068a), pagination audit (T084) added to
+      `tasks.md`.
+
 ## Open Follow-ups (non-blocking for MVP)
 
-- [ ] Confirm certificate PDF generation approach (server render vs. on-demand).
-- [ ] Confirm default best-vs-last quiz attempt scoring policy.
-- [ ] Confirm short-answer auto-grading vs. manual review default.
+- [ ] Confirm certificate **visual template/branding** (issuance + verification
+      logic already specified; default is a server-rendered PDF from HTML).
