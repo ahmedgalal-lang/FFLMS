@@ -1,12 +1,41 @@
 import { z } from "zod";
 
 /**
+ * Normalize provider-injected variable names to the canonical ones the app and
+ * Prisma schema use. The Vercel + Supabase integration injects
+ * POSTGRES_PRISMA_URL / POSTGRES_URL_NON_POOLING / SUPABASE_JWT_SECRET rather
+ * than DATABASE_URL / DIRECT_URL / AUTH_SECRET, so we bridge them here. Local
+ * dev and CranL set the canonical names directly and are left untouched.
+ */
+function firstNonEmpty(...vals: Array<string | undefined>): string | undefined {
+  for (const v of vals) if (v && v.length > 0) return v;
+  return undefined;
+}
+
+const databaseUrl = firstNonEmpty(
+  process.env.DATABASE_URL,
+  process.env.POSTGRES_PRISMA_URL, // Supabase pooled (PgBouncer) — ideal for Prisma
+  process.env.POSTGRES_URL,
+);
+if (databaseUrl) process.env.DATABASE_URL = databaseUrl;
+
+const directUrl = firstNonEmpty(
+  process.env.DIRECT_URL,
+  process.env.POSTGRES_URL_NON_POOLING, // Supabase direct — for migrations
+  databaseUrl,
+);
+if (directUrl) process.env.DIRECT_URL = directUrl;
+
+const authSecret = firstNonEmpty(
+  process.env.AUTH_SECRET,
+  process.env.SUPABASE_JWT_SECRET, // convenience fallback so deploys boot
+);
+if (authSecret) process.env.AUTH_SECRET = authSecret;
+
+/**
  * Validated environment. At real runtime the app fails fast if required vars
- * are missing or malformed (constitution: no unchecked config across a
- * boundary).
- *
- * Exception: during `next build` (page-data collection) the hosting platform
- * may not expose runtime secrets yet. We must not crash the build then —
+ * are missing or malformed. During `next build` (page-data collection) the
+ * platform may not expose runtime secrets yet, so we don't crash the build —
  * values are re-validated on the first request, where they ARE present.
  */
 const schema = z.object({
@@ -36,8 +65,9 @@ if (!parsed.success && !isBuildPhase && !skipValidation) {
     .join("\n");
   throw new Error(
     `Invalid environment configuration:\n${issues}\n` +
-      `Set these in your hosting provider (e.g. Vercel Project Settings → ` +
-      `Environment Variables) or in .env for local dev.`,
+      `Set DATABASE_URL and AUTH_SECRET (or the equivalent Supabase-injected ` +
+      `POSTGRES_PRISMA_URL / SUPABASE_JWT_SECRET) in your hosting provider's ` +
+      `Environment Variables, or in .env for local dev.`,
   );
 }
 

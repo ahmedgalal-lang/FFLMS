@@ -1,4 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "export DIRECT_URL=\"${DIRECT_URL:-$DATABASE_URL}\" && prisma generate && prisma migrate deploy && next build"
+  "buildCommand": "export DATABASE_URL=\"${DATABASE_URL:-${POSTGRES_PRISMA_URL:-$POSTGRES_URL}}\" && export DIRECT_URL=\"${DIRECT_URL:-${POSTGRES_URL_NON_POOLING:-$DATABASE_URL}}\" && prisma generate && prisma migrate deploy && next build"
 }

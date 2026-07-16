@@ -1,3 +1,4 @@
+import "@/env"; // normalize provider env names (Supabase → DATABASE_URL) first
 import { PrismaClient } from "@prisma/client";
 
 /**
