@@ -12,6 +12,19 @@ description: "Task list for LMS Platform implementation"
 (Principle IV), so test tasks appear for grading, progress, enrollment, access
 control, and each P1/P2 journey.
 
+> **Implementation status (2026-07-16)**: The **MVP is built and verified** —
+> Phase 1 (Setup), Phase 2 (Foundational), Phase 3 (US1 authoring), and Phase 4
+> (US2 enroll & learn). Delivered: Next.js 15 scaffold, Prisma schema +
+> migration + seed, Auth.js credentials with role-aware sessions, the central
+> `authorize()` policy, course/curriculum/publish/catalog/enrollment/progress
+> services, and the marketing, auth, studio, and learn UIs. Verified via 22
+> green unit tests, a clean `next build`, and end-to-end HTTP + DB checks.
+> Deferred to later increments: object storage (T016) and full observability
+> (T017) are stubbed pending the P2 media/jobs work; full e2e (Playwright) and
+> the P2/P3 phases (5–11) are not yet implemented. Assessment/certificate/
+> discussion/notification tables were intentionally left out of the MVP
+> migration and land with their stories.
+
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: Can run in parallel (different files, no dependencies)

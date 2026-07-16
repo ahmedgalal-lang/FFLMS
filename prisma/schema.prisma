@@ -1,0 +1,229 @@
+// Lumen LMS — Prisma schema
+// Source of truth for the data layer (see specs/001-lms-platform/data-model.md).
+// MVP scope: accounts/auth, catalog + authoring, enrollment + progress.
+// Assessment, discussion, notification, and certificate models are introduced
+// in the P2/P3 increments and intentionally omitted here to keep the MVP
+// migration focused.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  INSTRUCTOR
+  STUDENT
+}
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum CourseStatus {
+  DRAFT
+  IN_REVIEW
+  PUBLISHED
+  ARCHIVED
+}
+
+enum ContentType {
+  VIDEO
+  TEXT
+  FILE
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id            String        @id @default(cuid())
+  email         String        @unique
+  passwordHash  String?
+  name          String
+  avatarUrl     String?
+  role          Role          @default(STUDENT)
+  status        AccountStatus @default(ACTIVE)
+  emailVerified DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  accounts        Account[]
+  sessions        Session[]
+  coursesAuthored Course[]      @relation("CourseInstructor")
+  enrollments     Enrollment[]
+  auditLogs       AuditLog[]    @relation("AuditActor")
+
+  @@index([role])
+}
+
+// ---- Auth.js adapter models ----
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ---- Catalog & authoring ----
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  courses Course[]
+}
+
+model Course {
+  id                  String       @id @default(cuid())
+  title               String
+  slug                String       @unique
+  summary             String
+  description         String
+  coverImageUrl       String?
+  status              CourseStatus @default(DRAFT)
+  completionThreshold Int          @default(100)
+  instructorId        String
+  categoryId          String?
+  publishedAt         DateTime?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  deletedAt           DateTime?
+
+  instructor  User         @relation("CourseInstructor", fields: [instructorId], references: [id])
+  category    Category?    @relation(fields: [categoryId], references: [id])
+  modules     Module[]
+  enrollments Enrollment[]
+
+  @@index([status, categoryId])
+  @@index([instructorId])
+}
+
+model Module {
+  id       String   @id @default(cuid())
+  courseId String
+  title    String
+  order    Int
+  createdAt DateTime @default(now())
+
+  course  Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons Lesson[]
+
+  @@unique([courseId, order])
+}
+
+model Lesson {
+  id               String    @id @default(cuid())
+  moduleId         String
+  title            String
+  order            Int
+  isRequired       Boolean   @default(true)
+  estimatedMinutes Int?
+  deletedAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  module        Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  contentBlocks ContentBlock[]
+  progress      LessonProgress[]
+
+  @@unique([moduleId, order])
+}
+
+model ContentBlock {
+  id       String      @id @default(cuid())
+  lessonId String
+  type     ContentType
+  order    Int
+  text     String?
+  mediaUrl String?
+  fileName String?
+  fileSize Int?
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, order])
+}
+
+// ---- Enrollment & progress ----
+model Enrollment {
+  id              String           @id @default(cuid())
+  studentId       String
+  courseId        String
+  status          EnrollmentStatus @default(ACTIVE)
+  progressPercent Int              @default(0)
+  enrolledAt      DateTime         @default(now())
+  completedAt     DateTime?
+
+  student        User             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course         Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessonProgress LessonProgress[]
+
+  @@unique([studentId, courseId])
+  @@index([studentId])
+}
+
+model LessonProgress {
+  id              String    @id @default(cuid())
+  enrollmentId    String
+  lessonId        String
+  completedAt     DateTime?
+  lastPositionSec Int?
+  updatedAt       DateTime  @updatedAt
+
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  lesson     Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([enrollmentId, lessonId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  action     String
+  targetType String
+  targetId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  actor User @relation("AuditActor", fields: [actorId], references: [id])
+
+  @@index([createdAt])
+}

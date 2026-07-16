@@ -10,8 +10,46 @@ users, approve courses, and view reports.
 
 ## Status
 
-📋 **Planning complete.** This repository currently contains the full
-spec-driven plan. Implementation follows `specs/001-lms-platform/tasks.md`.
+🚧 **MVP implemented.** The plan's shippable slice is built and verified:
+Phase 1 (Setup), Phase 2 (Foundational), **US1** (course authoring &
+publishing), and **US2** (enroll & learn with progress). The P2/P3 stories
+(quizzes, assignments, gradebook/certificates, admin, discussions, analytics)
+remain as planned increments in `specs/001-lms-platform/tasks.md`.
+
+### What works today
+
+- **Accounts & auth** — register / sign in (email + password via Auth.js),
+  role-aware sessions (Admin / Instructor / Student), server-side
+  `authorize()` policy enforced on every mutation.
+- **Authoring (US1)** — instructor studio: create courses, build modules &
+  lessons, add video/text/file content blocks, live publish-readiness gate,
+  publish / unpublish.
+- **Learning (US2)** — public catalog with search & category filter + pagination,
+  course detail, idempotent enrollment, course player with lesson content,
+  mark-complete, accurate progress %, resume-where-you-left-off, "My Learning".
+
+### Verified
+
+- 22 unit tests green (progress computation, publish gate, authorization matrix)
+- `next build` clean (12 routes), `tsc --noEmit` and ESLint pass
+- End-to-end over HTTP: catalog/search, auth redirects, credentials login with
+  role in session; enroll idempotency and progress→100%/COMPLETED confirmed
+  against the database
+
+### Run it
+
+```bash
+npm install
+cp .env.example .env          # point DATABASE_URL at a Postgres 16 instance
+npm run db:migrate            # apply migrations
+npm run db:seed               # demo admin / instructor / student
+npm run dev                   # http://localhost:3000
+```
+
+Demo logins (all password `Password123!`): `admin@example.com`,
+`instructor@example.com`, `student@example.com`. See
+[`specs/001-lms-platform/quickstart.md`](specs/001-lms-platform/quickstart.md)
+for details.
 
 ## Spec-Driven Planning Artifacts
 

@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+:root {
+  --ground: #f4f6f4;
+  --surface: #ffffff;
+  --surface-2: #eef1ee;
+  --surface-3: #e6eae7;
+  --ink: #16211d;
+  --ink-2: #4a584f;
+  --ink-3: #7d8b83;
+  --line: #dde3df;
+  --brand: #1f6f5c;
+  --brand-strong: #175647;
+  --brand-ink: #ffffff;
+  --brand-soft: #e2efe9;
+  --accent: #bb5f28;
+  --success: #2f9e6f;
+  --warning: #b9821a;
+  --critical: #cf4b5c;
+}
+
+@theme inline {
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-soft: var(--brand-soft);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-critical: var(--critical);
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+}
+
+a {
+  color: inherit;
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* focus visibility (constitution VI) */
+:focus-visible {
+  outline: 2.5px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
