@@ -1,0 +1,66 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { GraduationCap } from "lucide-react";
+import { requirePrincipal } from "@/server/auth";
+import { listMyEnrollments } from "@/server/services/enrollment";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+
+export const metadata: Metadata = { title: "My Learning" };
+
+export default async function MyLearningPage() {
+  const principal = await requirePrincipal();
+  const enrollments = await listMyEnrollments(principal);
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">My Learning</h1>
+
+      {enrollments.length === 0 ? (
+        <div className="rounded-lg border border-dashed p-12 text-center">
+          <GraduationCap className="mx-auto h-10 w-10 text-muted-foreground" />
+          <p className="mt-3 text-muted-foreground">
+            You haven&apos;t enrolled in any courses yet.
+          </p>
+          <Button asChild className="mt-4">
+            <Link href="/courses">Browse the catalog</Link>
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {enrollments.map((enr) => (
+            <Link
+              key={enr.id}
+              href={`/learn/${enr.course.slug}`}
+              className="flex flex-col gap-3 rounded-lg border bg-card p-5 transition-colors hover:border-primary sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h2 className="font-semibold">{enr.course.title}</h2>
+                  {enr.status === "COMPLETED" && (
+                    <Badge variant="success">Completed</Badge>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {enr.course.instructor.name}
+                </p>
+                <div className="mt-3 flex items-center gap-3">
+                  <Progress value={enr.progressPercent} className="max-w-xs" />
+                  <span className="text-xs text-muted-foreground">
+                    {enr.progressPercent}%
+                  </span>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" className="shrink-0" asChild>
+                <span>
+                  {enr.progressPercent > 0 ? "Continue" : "Start"}
+                </span>
+              </Button>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
