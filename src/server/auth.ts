@@ -23,24 +23,45 @@ const providers = [
     credentials: { email: {}, password: {} },
     authorize: async (raw) => {
       const parsed = credentialsSchema.safeParse(raw);
-      if (!parsed.success) return null;
-      const { email, password } = parsed.data;
+      if (!parsed.success) {
+        console.warn("[auth] invalid credentials shape:", parsed.error.issues);
+        return null;
+      }
+      const email = parsed.data.email.trim().toLowerCase();
+      const { password } = parsed.data;
 
-      const user = await db.user.findUnique({ where: { email } });
-      if (!user || !user.passwordHash) return null;
-      if (user.status === "SUSPENDED") return null;
-
-      const ok = await bcrypt.compare(password, user.passwordHash);
-      if (!ok) return null;
-
-      return {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        image: user.avatarUrl ?? undefined,
-        role: user.role,
-        status: user.status,
-      };
+      try {
+        const user = await db.user.findUnique({ where: { email } });
+        if (!user) {
+          console.warn(`[auth] no user for ${email}`);
+          return null;
+        }
+        if (!user.passwordHash) {
+          console.warn(`[auth] user ${email} has no passwordHash (OAuth-only?)`);
+          return null;
+        }
+        if (user.status === "SUSPENDED") {
+          console.warn(`[auth] user ${email} is suspended`);
+          return null;
+        }
+        const ok = await bcrypt.compare(password, user.passwordHash);
+        if (!ok) {
+          console.warn(`[auth] bad password for ${email}`);
+          return null;
+        }
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          image: user.avatarUrl ?? undefined,
+          role: user.role,
+          status: user.status,
+        };
+      } catch (e) {
+        // Surface DB/connection errors instead of masking them as bad creds.
+        console.error("[auth] authorize error:", e);
+        throw e;
+      }
     },
   }),
   ...(googleOAuthEnabled
