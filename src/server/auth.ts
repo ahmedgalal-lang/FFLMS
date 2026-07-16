@@ -27,11 +27,15 @@ const providers = [
         console.warn("[auth] invalid credentials shape:", parsed.error.issues);
         return null;
       }
-      const email = parsed.data.email.trim().toLowerCase();
+      const email = parsed.data.email.trim();
       const { password } = parsed.data;
 
       try {
-        const user = await db.user.findUnique({ where: { email } });
+        // Case-insensitive lookup so casing in the typed email never blocks a
+        // real account (emails are stored as registered).
+        const user = await db.user.findFirst({
+          where: { email: { equals: email, mode: "insensitive" } },
+        });
         if (!user) {
           console.warn(`[auth] no user for ${email}`);
           return null;

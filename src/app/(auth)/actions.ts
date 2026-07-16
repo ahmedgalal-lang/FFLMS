@@ -44,9 +44,14 @@ export async function registerAction(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
-  const { name, email, password, role } = parsed.data;
+  const { name, password, role } = parsed.data;
+  // Store emails normalized (trimmed + lowercased) so casing never causes
+  // duplicate accounts or failed logins.
+  const email = parsed.data.email.trim().toLowerCase();
 
-  const existing = await db.user.findUnique({ where: { email } });
+  const existing = await db.user.findFirst({
+    where: { email: { equals: email, mode: "insensitive" } },
+  });
   if (existing) {
     return { error: "An account with that email already exists." };
   }
