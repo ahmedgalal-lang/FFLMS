@@ -1,4 +1,43 @@
-# Deploying Lumen LMS on CranL
+# Deploying Lumen LMS
+
+**Database tables are created automatically on deploy — you do not create them
+by hand.** How that happens depends on the host:
+
+- **Vercel** (serverless): `vercel.json` sets the build command to
+  `prisma generate && prisma migrate deploy && next build`, so migrations run
+  during every build.
+- **CranL / Docker**: `docker-entrypoint.sh` runs `prisma migrate deploy` on
+  every container boot.
+
+Both require the database env vars below to be set on the host **before** the
+first deploy.
+
+## Required environment variables (set these on the host)
+
+| Variable | Value |
+|----------|-------|
+| `DATABASE_URL` | App runtime connection. For Supabase use the **pooled** URL (`...pooler...:6543/...?pgbouncer=true`). |
+| `DIRECT_URL` | Migrations connection. For Supabase use the **direct** URL (`...:5432/...`). Required so `migrate deploy` can run. |
+| `AUTH_SECRET` | `openssl rand -base64 32` |
+| `SEED_ON_START` | *(Docker only, optional)* `true` on the first deploy to load demo data, then remove. |
+
+> On a CranL-managed Postgres you only get one URL — set it as `DATABASE_URL`;
+> `DIRECT_URL` falls back to it automatically in the container.
+
+## Vercel
+
+1. Import the repo. Framework preset: **Next.js** (the `buildCommand` in
+   `vercel.json` takes over automatically).
+2. Project → **Settings → Environment Variables**: add `DATABASE_URL`,
+   `DIRECT_URL`, `AUTH_SECRET` (see table above).
+3. **Deploy.** The build runs `prisma migrate deploy` → tables are created →
+   the app starts. No manual SQL.
+4. (Optional demo data) run once from your machine:
+   `DATABASE_URL=... DIRECT_URL=... npm run db:seed`.
+
+---
+
+# Deploying on CranL (Dockerfile)
 
 This app ships a `Dockerfile`, so deploy it on CranL with **Build Type =
 Dockerfile**. The container applies database migrations on every boot and then
