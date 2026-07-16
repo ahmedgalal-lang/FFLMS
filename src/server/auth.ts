@@ -51,6 +51,9 @@ const providers = [
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   secret: env.AUTH_SECRET,
+  // Trust the platform proxy host (CranL *.cranl.net / custom domains, Vercel)
+  // so callback URLs resolve without a hardcoded AUTH_URL.
+  trustHost: true,
   pages: { signIn: "/sign-in" },
   providers,
   callbacks: {
