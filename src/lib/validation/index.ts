@@ -189,6 +189,32 @@ export const gradeSubmissionSchema = z.object({
 });
 export type GradeSubmissionInput = z.infer<typeof gradeSubmissionSchema>;
 
+// ---------- Admin ----------
+
+export const changeRoleSchema = z.object({
+  role: z.enum(["ADMIN", "INSTRUCTOR", "STUDENT"]),
+});
+
+export const setStatusSchema = z.object({
+  status: z.enum(["ACTIVE", "SUSPENDED"]),
+});
+
+export const rejectCourseSchema = z.object({
+  reason: z.string().min(1, "Give a reason").max(2000),
+});
+
+export const categorySchema = z.object({
+  name: z.string().min(2).max(80),
+  description: z.string().max(500).optional().nullable(),
+});
+export type CategoryInput = z.infer<typeof categorySchema>;
+
+export const adminUsersQuerySchema = z.object({
+  q: z.string().max(160).optional(),
+  role: z.enum(["ADMIN", "INSTRUCTOR", "STUDENT"]).optional(),
+  page: z.coerce.number().int().min(1).optional().default(1),
+});
+
 // ---------- Uploads ----------
 
 export const presignSchema = z.object({

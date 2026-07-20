@@ -19,6 +19,7 @@ import {
   deleteContentBlock,
 } from "@/server/services/curriculum";
 import { publishCourse, unpublishCourse } from "@/server/services/publish";
+import { submitForReview } from "@/server/services/review";
 import { courseCreateSchema, contentBlockSchema } from "@/lib/validation";
 import { AppError } from "@/server/http";
 import { AuthorizationError } from "@/server/access/policy";
@@ -198,6 +199,19 @@ export async function publishCourseAction(courseId: string): Promise<ActionState
     await publishCourse(principal, courseId);
     revalidatePath(`/studio/${courseId}`);
     revalidatePath("/courses");
+    return { ok: true };
+  } catch (err) {
+    return toState(err);
+  }
+}
+
+export async function submitForReviewAction(
+  courseId: string,
+): Promise<ActionState> {
+  const principal = await requirePrincipal();
+  try {
+    await submitForReview(principal, courseId);
+    revalidatePath(`/studio/${courseId}`);
     return { ok: true };
   } catch (err) {
     return toState(err);

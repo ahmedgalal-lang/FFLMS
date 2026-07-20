@@ -33,6 +33,7 @@ import {
   deleteContentBlockAction,
   publishCourseAction,
   unpublishCourseAction,
+  submitForReviewAction,
 } from "@/app/(teach)/studio/actions";
 import { ContentBlockEditor } from "@/components/course/content-block-editor";
 
@@ -107,14 +108,26 @@ export function CourseBuilder({
                 Unpublish
               </Button>
             </>
+          ) : course.status === "IN_REVIEW" ? (
+            <Badge variant="warning">Submitted for review</Badge>
           ) : (
-            <Button
-              size="sm"
-              disabled={pending || publishProblems.length > 0}
-              onClick={() => run(() => publishCourseAction(course.id))}
-            >
-              {pending ? <Loader2 className="animate-spin" /> : null} Publish
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={pending || publishProblems.length > 0}
+                onClick={() => run(() => submitForReviewAction(course.id))}
+              >
+                Submit for review
+              </Button>
+              <Button
+                size="sm"
+                disabled={pending || publishProblems.length > 0}
+                onClick={() => run(() => publishCourseAction(course.id))}
+              >
+                {pending ? <Loader2 className="animate-spin" /> : null} Publish
+              </Button>
+            </>
           )}
         </div>
       </div>

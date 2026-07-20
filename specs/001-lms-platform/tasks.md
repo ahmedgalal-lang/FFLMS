@@ -12,9 +12,12 @@ description: "Task list for LMS Platform implementation"
 > submission with server-time late flag, instructor grading queue + feedback,
 > notifications), and **US5 gradebook & certificates** (per-course gradebook
 > aggregation, student grades view, automatic certificate issuance on completion +
-> public verification page). 63 unit/integration tests + 4 e2e journeys pass;
-> typecheck, lint, and build are green. (Async certificate PDF generation, T063,
-> is deferred — certificates verify by code without a PDF.)
+> public verification page), and **US6 admin console** (users/roles + suspend
+> with self-lockout guard, course review queue with approve/reject + notify,
+> category management — all writing an AuditLog; instructor submit-for-review).
+> 71 unit/integration tests + 4 e2e journeys pass; typecheck, lint, and build are
+> green. (Async certificate PDF generation, T063, is deferred — certificates
+> verify by code without a PDF.)
 >
 > Known simplifications carried as follow-ups: presigned uploads return a
 > deterministic URL (real S3 SigV4 signing plugs into `src/server/storage`);
