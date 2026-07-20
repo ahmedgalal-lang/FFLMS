@@ -159,6 +159,36 @@ export const submitAttemptSchema = z.object({
 });
 export type SubmitAttemptInput = z.infer<typeof submitAttemptSchema>;
 
+// ---------- Assignments ----------
+
+export const assignmentSettingsSchema = z.object({
+  title: z.string().min(2).max(160),
+  instructions: z.string().max(20_000).optional().default(""),
+  dueAt: z.coerce.date().optional().nullable(),
+  allowText: z.boolean().optional().default(true),
+  allowFile: z.boolean().optional().default(true),
+  maxPoints: z.number().int().min(1).max(1000).default(100),
+  latePolicy: z.enum(["ACCEPT", "PENALIZE", "REJECT"]).optional().default("ACCEPT"),
+});
+export type AssignmentSettingsInput = z.input<typeof assignmentSettingsSchema>;
+
+export const submissionInputSchema = z
+  .object({
+    text: z.string().max(50_000).optional().nullable(),
+    fileUrl: z.string().url().optional().nullable(),
+    fileName: z.string().max(255).optional().nullable(),
+  })
+  .refine((s) => !!s.text?.trim() || !!s.fileUrl, {
+    message: "Provide a text answer or attach a file.",
+  });
+export type SubmissionInput = z.infer<typeof submissionInputSchema>;
+
+export const gradeSubmissionSchema = z.object({
+  score: z.number().int().min(0),
+  feedback: z.string().max(10_000).optional().nullable(),
+});
+export type GradeSubmissionInput = z.infer<typeof gradeSubmissionSchema>;
+
 // ---------- Uploads ----------
 
 export const presignSchema = z.object({

@@ -11,6 +11,7 @@ import {
   Paperclip,
   ExternalLink,
   HelpCircle,
+  ClipboardList,
   Loader2,
 } from "lucide-react";
 import type {
@@ -37,6 +38,7 @@ import { ContentBlockEditor } from "@/components/course/content-block-editor";
 type FullLesson = Lesson & {
   contentBlocks: ContentBlock[];
   quiz: { id: string } | null;
+  assignment: { id: string } | null;
 };
 type FullModule = Module & { lessons: FullLesson[] };
 type FullCourse = Course & { category: Category | null; modules: FullModule[] };
@@ -212,11 +214,17 @@ export function CourseBuilder({
                     lessonId={lesson.id}
                   />
 
-                  <div className="mt-2">
+                  <div className="mt-2 flex flex-wrap gap-2">
                     <Button asChild variant="outline" size="sm">
                       <Link href={`/studio/${course.id}/quiz/${lesson.id}`}>
                         <HelpCircle />
                         {lesson.quiz ? "Edit quiz" : "Add quiz"}
+                      </Link>
+                    </Button>
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/studio/${course.id}/assignment/${lesson.id}`}>
+                        <ClipboardList />
+                        {lesson.assignment ? "Edit assignment" : "Add assignment"}
                       </Link>
                     </Button>
                   </div>

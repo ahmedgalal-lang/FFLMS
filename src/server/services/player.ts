@@ -57,7 +57,38 @@ export async function loadPlayer(
         include: {
           contentBlocks: { orderBy: { order: "asc" } },
           quiz: { select: { id: true, title: true } },
-          assignment: { select: { id: true, title: true } },
+          assignment: {
+            select: {
+              id: true,
+              title: true,
+              instructions: true,
+              dueAt: true,
+              allowText: true,
+              allowFile: true,
+              maxPoints: true,
+            },
+          },
+        },
+      })
+    : null;
+
+  // The acting student's submission for the current lesson's assignment, if any.
+  const mySubmission = currentLesson?.assignment
+    ? await db.submission.findUnique({
+        where: {
+          assignmentId_studentId: {
+            assignmentId: currentLesson.assignment.id,
+            studentId: principal.id,
+          },
+        },
+        select: {
+          id: true,
+          text: true,
+          fileUrl: true,
+          status: true,
+          isLate: true,
+          score: true,
+          feedback: true,
         },
       })
     : null;
@@ -67,6 +98,7 @@ export async function loadPlayer(
     enrollment,
     completedIds: completed,
     currentLesson,
+    mySubmission,
     isCurrentComplete: currentId ? completed.has(currentId) : false,
   };
 }

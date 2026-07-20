@@ -16,6 +16,7 @@ import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { completeLessonAction } from "@/app/(learn)/learn/[slug]/actions";
 import { QuizTaker } from "@/components/quiz/quiz-taker";
+import { AssignmentPanel } from "@/components/assignment/assignment-panel";
 
 type PlayerLesson = {
   id: string;
@@ -30,25 +31,45 @@ type PlayerCourse = {
   slug: string;
   modules: PlayerModule[];
 };
+type LessonAssignment = {
+  id: string;
+  title: string;
+  instructions: string;
+  dueAt: Date | null;
+  allowText: boolean;
+  allowFile: boolean;
+  maxPoints: number;
+};
 type CurrentLesson =
   | (PlayerLesson & {
       contentBlocks: ContentBlock[];
       quiz: { id: string; title: string } | null;
-      assignment: { id: string; title: string } | null;
+      assignment: LessonAssignment | null;
     })
   | null;
+type MySubmission = {
+  id: string;
+  text: string | null;
+  fileUrl: string | null;
+  status: string;
+  isLate: boolean;
+  score: number | null;
+  feedback: string | null;
+} | null;
 
 export function CoursePlayer({
   slug,
   course,
   completedIds,
   currentLesson,
+  mySubmission,
   progressPercent,
 }: {
   slug: string;
   course: PlayerCourse;
   completedIds: string[];
   currentLesson: CurrentLesson;
+  mySubmission: MySubmission;
   progressPercent: number;
 }) {
   const router = useRouter();
@@ -176,6 +197,18 @@ export function CoursePlayer({
 
               {currentLesson.quiz && (
                 <QuizTaker quizId={currentLesson.quiz.id} />
+              )}
+
+              {currentLesson.assignment && (
+                <AssignmentPanel
+                  assignment={{
+                    ...currentLesson.assignment,
+                    dueAt: currentLesson.assignment.dueAt
+                      ? currentLesson.assignment.dueAt.toISOString()
+                      : null,
+                  }}
+                  submission={mySubmission}
+                />
               )}
             </div>
 

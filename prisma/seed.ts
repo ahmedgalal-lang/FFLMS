@@ -180,6 +180,26 @@ async function main() {
       });
     }
 
+    // Attach a sample assignment to the last lesson to demo US4.
+    const lastLesson = await db.lesson.findFirst({
+      where: { module: { courseId: course.id } },
+      orderBy: [{ module: { order: "desc" } }, { order: "desc" }],
+    });
+    if (lastLesson) {
+      await db.assignment.create({
+        data: {
+          lessonId: lastLesson.id,
+          title: "Build a small Next.js page",
+          instructions:
+            "Create a simple page using the App Router and describe how it renders.",
+          allowText: true,
+          allowFile: true,
+          maxPoints: 100,
+          latePolicy: "ACCEPT",
+        },
+      });
+    }
+
     // Enroll the sample student so "My Learning" is populated.
     await db.enrollment.create({
       data: { studentId: student.id, courseId: course.id },

@@ -26,6 +26,7 @@ export default async function PlayerPage({
         course={data.course}
         completedIds={[...data.completedIds]}
         currentLesson={data.currentLesson}
+        mySubmission={data.mySubmission}
         progressPercent={data.enrollment.progressPercent}
       />
     );

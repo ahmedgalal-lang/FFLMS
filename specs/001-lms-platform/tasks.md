@@ -4,12 +4,14 @@ description: "Task list for LMS Platform implementation"
 
 # Tasks: LMS Platform
 
-> **Implementation status.** Phases 1–5 (T001–T050) are implemented and
+> **Implementation status.** Phases 1–6 (T001–T056) are implemented and
 > verified: project scaffold + tooling, the foundational data/auth/authz layer,
 > **US1 course authoring & publishing**, **US2 enroll & learn with progress**,
-> and **US3 quizzes & automated grading** (builder + timed/attempt-limited taker
-> with server-side grading). 49 unit/integration tests + 4 e2e journeys pass;
-> typecheck, lint, and build are green.
+> **US3 quizzes & automated grading** (builder + timed/attempt-limited taker with
+> server-side grading), and **US4 assignments & manual grading** (authoring, text/
+> file submission with server-time late flag, instructor grading queue + feedback,
+> notifications). 56 unit/integration tests + 4 e2e journeys pass; typecheck,
+> lint, and build are green.
 >
 > Known simplifications carried as follow-ups: presigned uploads return a
 > deterministic URL (real S3 SigV4 signing plugs into `src/server/storage`);
