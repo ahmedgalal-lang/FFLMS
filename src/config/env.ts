@@ -5,8 +5,29 @@ import { z } from "zod";
  * server; never read `process.env` directly. Client code must not import this
  * module (it would leak server secrets into the bundle).
  */
+/**
+ * Bridge provider-injected env names to the canonical ones Prisma uses, so
+ * Vercel + Supabase (which inject POSTGRES_PRISMA_URL / POSTGRES_URL /
+ * POSTGRES_URL_NON_POOLING) work without manually setting DATABASE_URL. Runs
+ * before validation; a locally-set DATABASE_URL always takes precedence.
+ */
+function normalizeDatabaseEnv() {
+  process.env.DATABASE_URL =
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.POSTGRES_URL ||
+    "";
+  process.env.DIRECT_URL =
+    process.env.DIRECT_URL ||
+    process.env.POSTGRES_URL_NON_POOLING ||
+    process.env.DATABASE_URL ||
+    "";
+}
+normalizeDatabaseEnv();
+
 const envSchema = z.object({
   DATABASE_URL: z.string().url(),
+  DIRECT_URL: z.string().url().optional(),
   AUTH_SECRET: z.string().min(1),
   AUTH_URL: z.string().url().optional(),
   AUTH_GITHUB_ID: z.string().optional().default(""),

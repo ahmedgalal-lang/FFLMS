@@ -7,7 +7,11 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  // Pooled connection (e.g. PgBouncer/Supabase) used by the app at runtime.
   url      = env("DATABASE_URL")
+  // Direct connection for migrations (Prisma CLI). Falls back to DATABASE_URL
+  // when a separate direct URL is not provided (see src/config/env.ts).
+  directUrl = env("DIRECT_URL")
 }
 
 // ---------- Enums ----------
