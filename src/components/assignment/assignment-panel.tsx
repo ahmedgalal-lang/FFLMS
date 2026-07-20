@@ -6,6 +6,7 @@ import { ClipboardList, CheckCircle2, Clock, Loader2, FileText } from "lucide-re
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { uploadFile } from "@/lib/upload-client";
 
 type AssignmentInfo = {
   id: string;
@@ -43,30 +44,13 @@ export function AssignmentPanel({
 
   const graded = submission?.status === "GRADED";
 
-  async function uploadFile(file: File) {
+  async function handleFileUpload(file: File) {
     setError(null);
     setUploading(true);
     try {
-      const res = await fetch("/api/uploads", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fileName: file.name,
-          contentType: file.type || "application/octet-stream",
-          sizeBytes: file.size,
-          prefix: "submissions",
-        }),
-      });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body?.error?.message ?? "Upload could not start.");
-      const put = await fetch(body.uploadUrl, {
-        method: "PUT",
-        headers: body.headers,
-        body: file,
-      });
-      if (!put.ok) throw new Error("File upload failed.");
-      setFileUrl(body.publicUrl);
-      setFileName(file.name);
+      const { url, name } = await uploadFile(file, "submissions");
+      setFileUrl(url);
+      setFileName(name);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed.");
     } finally {
@@ -157,7 +141,7 @@ export function AssignmentPanel({
             className="text-sm"
             onChange={(e) => {
               const f = e.target.files?.[0];
-              if (f) uploadFile(f);
+              if (f) handleFileUpload(f);
             }}
           />
           {fileUrl && (

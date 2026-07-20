@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { updateProfileAction } from "@/app/(learn)/profile/actions";
+import { uploadFile } from "@/lib/upload-client";
 
 export function ProfileForm({
   name: initialName,
@@ -34,23 +35,10 @@ export function ProfileForm({
     setMessage(null);
     setUploading(true);
     try {
-      const res = await fetch("/api/uploads", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fileName: file.name,
-          contentType: file.type || "image/png",
-          sizeBytes: file.size,
-          prefix: "avatars",
-        }),
-      });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body?.error?.message ?? "Upload could not start.");
-      const put = await fetch(body.uploadUrl, { method: "PUT", headers: body.headers, body: file });
-      if (!put.ok) throw new Error("Upload failed.");
-      setAvatarUrl(body.publicUrl);
+      const { url } = await uploadFile(file, "avatars");
+      setAvatarUrl(url);
       // Persist immediately so the header avatar updates.
-      await updateProfileAction({ name, bio, avatarUrl: body.publicUrl });
+      await updateProfileAction({ name, bio, avatarUrl: url });
       router.refresh();
       setMessage({ ok: true, text: "Photo updated." });
     } catch (e) {

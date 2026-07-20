@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { addContentBlockAction } from "@/app/(teach)/studio/actions";
+import { uploadFile } from "@/lib/upload-client";
 
 type Mode = null | "TEXT" | "VIDEO" | "FILE";
 
@@ -46,32 +47,12 @@ export function ContentBlockEditor({
     setError(null);
     startTransition(async () => {
       try {
-        const res = await fetch("/api/uploads", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            fileName: file.name,
-            contentType: file.type || "application/octet-stream",
-            sizeBytes: file.size,
-            prefix: "lessons",
-          }),
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => null);
-          throw new Error(body?.error?.message ?? "Upload could not be started.");
-        }
-        const { uploadUrl, publicUrl, headers } = await res.json();
-        const put = await fetch(uploadUrl, {
-          method: "PUT",
-          headers,
-          body: file,
-        });
-        if (!put.ok) throw new Error("File upload failed.");
+        const { url, name, size } = await uploadFile(file, "lessons");
         const result = await addContentBlockAction(courseId, lessonId, {
           type: "FILE",
-          mediaUrl: publicUrl,
-          fileName: file.name,
-          fileSize: file.size,
+          mediaUrl: url,
+          fileName: name,
+          fileSize: size,
         });
         if (result?.error) throw new Error(result.error);
         setMode(null);

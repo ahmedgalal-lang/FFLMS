@@ -38,6 +38,8 @@ const envSchema = z.object({
   S3_ACCESS_KEY_ID: z.string().optional().default(""),
   S3_SECRET_ACCESS_KEY: z.string().optional().default(""),
   S3_PUBLIC_URL: z.string().optional().default(""),
+  // Vercel Blob storage (auto-injected when a Blob store is connected).
+  BLOB_READ_WRITE_TOKEN: z.string().optional().default(""),
   MAX_UPLOAD_MB: z.coerce.number().positive().default(50),
   NODE_ENV: z
     .enum(["development", "test", "production"])
@@ -58,5 +60,5 @@ function loadEnv() {
 export const env = loadEnv();
 
 export const isOAuthEnabled = env.AUTH_GITHUB_ID !== "" && env.AUTH_GITHUB_SECRET !== "";
-export const isStorageConfigured =
-  env.S3_ENDPOINT !== "" && env.S3_BUCKET !== "" && env.S3_ACCESS_KEY_ID !== "";
+/** Uploads work when a Vercel Blob store is connected. */
+export const isStorageConfigured = env.BLOB_READ_WRITE_TOKEN !== "";
