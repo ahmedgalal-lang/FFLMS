@@ -9,6 +9,7 @@ import {
   FileText,
   Paperclip,
   Award,
+  MessageSquare,
   Loader2,
 } from "lucide-react";
 import type { ContentBlock } from "@prisma/client";
@@ -132,12 +133,20 @@ export function CoursePlayer({
           <Progress value={progress} />
         </div>
 
-        <Link
-          href={`/learn/${slug}/grades`}
-          className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
-        >
-          <Award className="h-4 w-4" /> My grades &amp; certificate
-        </Link>
+        <div className="flex flex-col gap-1.5">
+          <Link
+            href={`/learn/${slug}/grades`}
+            className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+          >
+            <Award className="h-4 w-4" /> My grades &amp; certificate
+          </Link>
+          <Link
+            href={`/learn/${slug}/discussions`}
+            className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+          >
+            <MessageSquare className="h-4 w-4" /> Discussion &amp; announcements
+          </Link>
+        </div>
 
         <nav className="space-y-4">
           {course.modules.map((mod, mi) => (

@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { GraduationCap } from "lucide-react";
+import { GraduationCap, Bell } from "lucide-react";
 import { getPrincipal } from "@/server/auth";
 import { db } from "@/server/db";
+import { unreadCount } from "@/server/services/notification";
 import { Button } from "@/components/ui/button";
 import { UserMenu } from "@/components/layout/user-menu";
 
@@ -14,6 +15,7 @@ export async function SiteHeader() {
         select: { name: true, email: true, role: true, avatarUrl: true },
       })
     : null;
+  const unread = principal ? await unreadCount(principal) : 0;
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
@@ -55,12 +57,24 @@ export async function SiteHeader() {
         </div>
 
         {user ? (
-          <UserMenu
-            name={user.name}
-            email={user.email}
-            role={user.role}
-            avatarUrl={user.avatarUrl}
-          />
+          <div className="flex items-center gap-2">
+            <Button asChild variant="ghost" size="icon" className="relative">
+              <Link href="/notifications" aria-label="Notifications">
+                <Bell className="h-5 w-5" />
+                {unread > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground">
+                    {unread > 9 ? "9+" : unread}
+                  </span>
+                )}
+              </Link>
+            </Button>
+            <UserMenu
+              name={user.name}
+              email={user.email}
+              role={user.role}
+              avatarUrl={user.avatarUrl}
+            />
+          </div>
         ) : (
           <div className="flex items-center gap-2">
             <Button asChild variant="ghost" size="sm">

@@ -14,10 +14,13 @@ description: "Task list for LMS Platform implementation"
 > aggregation, student grades view, automatic certificate issuance on completion +
 > public verification page), and **US6 admin console** (users/roles + suspend
 > with self-lockout guard, course review queue with approve/reject + notify,
-> category management — all writing an AuditLog; instructor submit-for-review).
-> 71 unit/integration tests + 4 e2e journeys pass; typecheck, lint, and build are
-> green. (Async certificate PDF generation, T063, is deferred — certificates
-> verify by code without a PDF.)
+> category management — all writing an AuditLog; instructor submit-for-review),
+> and **US7 discussions & notifications** (per-course Q&A threads + replies with
+> reply notifications, instructor announcements broadcast to enrolled students, a
+> notification center with unread badge). 83 unit/integration tests + 4 e2e
+> journeys pass; typecheck, lint, and build are green. (Deferred: async
+> certificate PDF generation, T063, and transactional email delivery, T076 —
+> notifications are in-app; certificates verify by code without a PDF.)
 >
 > Known simplifications carried as follow-ups: presigned uploads return a
 > deterministic URL (real S3 SigV4 signing plugs into `src/server/storage`);

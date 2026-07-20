@@ -52,6 +52,9 @@ export type Action =
   | { type: "assignment:submit"; enrollment: EnrollmentResource }
   | { type: "assignment:grade"; course: CourseResource }
   | { type: "gradebook:read"; course: CourseResource }
+  // Discussions & announcements
+  | { type: "discussion:participate"; course: CourseResource; isEnrolled: boolean }
+  | { type: "announcement:create"; course: CourseResource }
   // Admin
   | { type: "admin:users" }
   | { type: "admin:review" }
@@ -100,7 +103,12 @@ export function can(principal: Principal, action: Action): boolean {
     case "assignment:manage":
     case "assignment:grade":
     case "gradebook:read":
+    case "announcement:create":
       return owns(principal, action.course);
+
+    case "discussion:participate":
+      // The course instructor, or any student with an active enrollment.
+      return owns(principal, action.course) || action.isEnrolled === true;
 
     case "enrollment:create":
       return (

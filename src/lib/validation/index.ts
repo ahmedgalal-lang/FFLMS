@@ -258,6 +258,29 @@ export const adminUsersQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
 });
 
+// ---------- Discussions & announcements ----------
+
+export const threadCreateSchema = z.object({
+  courseId: z.string().cuid(),
+  title: z.string().min(3, "Title is too short").max(200),
+  body: z.string().min(1, "Write a message").max(10_000),
+});
+export type ThreadCreateInput = z.infer<typeof threadCreateSchema>;
+
+export const postCreateSchema = z.object({
+  threadId: z.string().cuid(),
+  body: z.string().min(1, "Write a reply").max(10_000),
+  parentPostId: z.string().cuid().optional().nullable(),
+});
+export type PostCreateInput = z.infer<typeof postCreateSchema>;
+
+export const announcementCreateSchema = z.object({
+  courseId: z.string().cuid(),
+  title: z.string().min(3).max(200),
+  body: z.string().min(1).max(10_000),
+});
+export type AnnouncementCreateInput = z.infer<typeof announcementCreateSchema>;
+
 // ---------- Uploads ----------
 
 export const presignSchema = z.object({

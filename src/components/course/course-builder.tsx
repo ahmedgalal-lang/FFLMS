@@ -13,6 +13,7 @@ import {
   HelpCircle,
   ClipboardList,
   BarChart3,
+  MessageSquare,
   Loader2,
 } from "lucide-react";
 import type {
@@ -90,6 +91,11 @@ export function CourseBuilder({
           <Button asChild variant="outline" size="sm">
             <Link href={`/studio/${course.id}/gradebook`}>
               <BarChart3 /> Gradebook
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/learn/${course.slug}/discussions`}>
+              <MessageSquare /> Discussion
             </Link>
           </Button>
           {isPublished ? (
