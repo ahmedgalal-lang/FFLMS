@@ -12,6 +12,7 @@ import {
   ExternalLink,
   HelpCircle,
   ClipboardList,
+  BarChart3,
   Loader2,
 } from "lucide-react";
 import type {
@@ -85,6 +86,11 @@ export function CourseBuilder({
           <Badge variant={isPublished ? "success" : "secondary"}>
             {course.status.toLowerCase().replace("_", " ")}
           </Badge>
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/studio/${course.id}/gradebook`}>
+              <BarChart3 /> Gradebook
+            </Link>
+          </Button>
           {isPublished ? (
             <>
               <Button asChild variant="outline" size="sm">

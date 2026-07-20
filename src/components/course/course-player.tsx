@@ -8,6 +8,7 @@ import {
   Circle,
   FileText,
   Paperclip,
+  Award,
   Loader2,
 } from "lucide-react";
 import type { ContentBlock } from "@prisma/client";
@@ -130,6 +131,13 @@ export function CoursePlayer({
           </div>
           <Progress value={progress} />
         </div>
+
+        <Link
+          href={`/learn/${slug}/grades`}
+          className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+        >
+          <Award className="h-4 w-4" /> My grades &amp; certificate
+        </Link>
 
         <nav className="space-y-4">
           {course.modules.map((mod, mi) => (

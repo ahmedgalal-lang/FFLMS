@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { SiteHeader } from "@/components/layout/site-header";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -6,7 +7,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <SiteHeader />
       <main className="container flex-1 py-8">{children}</main>
       <footer className="border-t py-6 text-center text-sm text-muted-foreground">
-        LMS Platform · Built with Next.js
+        LMS Platform · Built with Next.js ·{" "}
+        <Link href="/verify" className="hover:text-foreground hover:underline">
+          Verify a certificate
+        </Link>
       </footer>
     </div>
   );
