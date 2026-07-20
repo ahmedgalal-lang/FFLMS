@@ -136,6 +136,50 @@ async function main() {
       },
     });
 
+    // Attach a sample quiz to the first lesson to demo US3.
+    const firstLesson = await db.lesson.findFirst({
+      where: { module: { courseId: course.id } },
+      orderBy: [{ module: { order: "asc" } }, { order: "asc" }],
+    });
+    if (firstLesson) {
+      await db.quiz.create({
+        data: {
+          lessonId: firstLesson.id,
+          title: "Next.js basics check",
+          passingScore: 50,
+          questions: {
+            create: [
+              {
+                type: "MULTIPLE_CHOICE",
+                prompt: "Next.js is primarily a framework for…",
+                points: 1,
+                order: 0,
+                options: {
+                  create: [
+                    { text: "React web apps", isCorrect: true, order: 0 },
+                    { text: "Native mobile apps", isCorrect: false, order: 1 },
+                    { text: "Game engines", isCorrect: false, order: 2 },
+                  ],
+                },
+              },
+              {
+                type: "TRUE_FALSE",
+                prompt: "Server Components render on the server.",
+                points: 1,
+                order: 1,
+                options: {
+                  create: [
+                    { text: "True", isCorrect: true, order: 0 },
+                    { text: "False", isCorrect: false, order: 1 },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      });
+    }
+
     // Enroll the sample student so "My Learning" is populated.
     await db.enrollment.create({
       data: { studentId: student.id, courseId: course.id },

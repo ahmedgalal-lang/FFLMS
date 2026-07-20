@@ -95,6 +95,70 @@ export const catalogQuerySchema = z.object({
 });
 export type CatalogQuery = z.infer<typeof catalogQuerySchema>;
 
+// ---------- Quizzes ----------
+
+export const quizSettingsSchema = z.object({
+  title: z.string().min(2).max(160),
+  passingScore: z.number().int().min(0).max(100).default(70),
+  timeLimitSec: z.number().int().min(0).max(86_400).optional().nullable(),
+  maxAttempts: z.number().int().min(1).max(100).optional().nullable(),
+  shuffleQuestions: z.boolean().optional().default(false),
+  showAnswersAfter: z.boolean().optional().default(true),
+});
+export type QuizSettingsInput = z.input<typeof quizSettingsSchema>;
+
+export const questionOptionInputSchema = z.object({
+  text: z.string().min(1).max(2000),
+  isCorrect: z.boolean().default(false),
+});
+
+export const questionInputSchema = z
+  .object({
+    type: z.enum([
+      "MULTIPLE_CHOICE",
+      "MULTI_SELECT",
+      "TRUE_FALSE",
+      "SHORT_ANSWER",
+    ]),
+    prompt: z.string().min(1).max(4000),
+    points: z.number().int().min(1).max(100).default(1),
+    correctText: z.string().max(2000).optional().nullable(),
+    options: z.array(questionOptionInputSchema).max(10).optional().default([]),
+  })
+  .superRefine((q, ctx) => {
+    if (q.type === "SHORT_ANSWER") {
+      if (!q.correctText?.trim()) {
+        ctx.addIssue({ code: "custom", message: "Provide the accepted answer", path: ["correctText"] });
+      }
+      return;
+    }
+    // Choice-based types need options with at least one correct.
+    if (q.options.length < 2) {
+      ctx.addIssue({ code: "custom", message: "Add at least two options", path: ["options"] });
+    }
+    const correct = q.options.filter((o) => o.isCorrect).length;
+    if (correct < 1) {
+      ctx.addIssue({ code: "custom", message: "Mark at least one option correct", path: ["options"] });
+    }
+    if (q.type === "MULTIPLE_CHOICE" && correct > 1) {
+      ctx.addIssue({ code: "custom", message: "Multiple choice allows only one correct option", path: ["options"] });
+    }
+  });
+export type QuestionInput = z.input<typeof questionInputSchema>;
+
+export const submitAttemptSchema = z.object({
+  answers: z
+    .array(
+      z.object({
+        questionId: z.string().cuid(),
+        selectedOptionIds: z.array(z.string().cuid()).default([]),
+        answerText: z.string().max(4000).optional().nullable(),
+      }),
+    )
+    .default([]),
+});
+export type SubmitAttemptInput = z.infer<typeof submitAttemptSchema>;
+
 // ---------- Uploads ----------
 
 export const presignSchema = z.object({

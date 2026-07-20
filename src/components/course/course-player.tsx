@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { completeLessonAction } from "@/app/(learn)/learn/[slug]/actions";
+import { QuizTaker } from "@/components/quiz/quiz-taker";
 
 type PlayerLesson = {
   id: string;
@@ -171,6 +172,10 @@ export function CoursePlayer({
                 <p className="text-muted-foreground">
                   No content in this lesson yet.
                 </p>
+              )}
+
+              {currentLesson.quiz && (
+                <QuizTaker quizId={currentLesson.quiz.id} />
               )}
             </div>
 
