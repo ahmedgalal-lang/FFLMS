@@ -191,10 +191,20 @@ export type GradeSubmissionInput = z.infer<typeof gradeSubmissionSchema>;
 
 // ---------- Profile (self-service) ----------
 
+// Avatar is stored inline in the DB as a small resized data URL, or as an
+// external http(s) URL. Capped to keep rows and page payloads small.
+const avatarValue = z
+  .string()
+  .max(700_000, "Image is too large")
+  .refine(
+    (v) => v.startsWith("data:image/") || /^https?:\/\//.test(v),
+    "Must be an image",
+  );
+
 export const profileUpdateSchema = z.object({
   name: z.string().min(2, "Name is too short").max(100),
   bio: z.string().max(1000).optional().nullable(),
-  avatarUrl: z.string().url().optional().nullable(),
+  avatarUrl: avatarValue.optional().nullable(),
 });
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
 
