@@ -10,6 +10,7 @@ import {
   Video,
   Paperclip,
   ExternalLink,
+  HelpCircle,
   Loader2,
 } from "lucide-react";
 import type {
@@ -33,7 +34,10 @@ import {
 } from "@/app/(teach)/studio/actions";
 import { ContentBlockEditor } from "@/components/course/content-block-editor";
 
-type FullLesson = Lesson & { contentBlocks: ContentBlock[] };
+type FullLesson = Lesson & {
+  contentBlocks: ContentBlock[];
+  quiz: { id: string } | null;
+};
 type FullModule = Module & { lessons: FullLesson[] };
 type FullCourse = Course & { category: Category | null; modules: FullModule[] };
 
@@ -207,6 +211,15 @@ export function CourseBuilder({
                     courseId={course.id}
                     lessonId={lesson.id}
                   />
+
+                  <div className="mt-2">
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/studio/${course.id}/quiz/${lesson.id}`}>
+                        <HelpCircle />
+                        {lesson.quiz ? "Edit quiz" : "Add quiz"}
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
               ))}
 
