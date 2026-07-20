@@ -1,40 +1,16 @@
 "use server";
 
-import { AuthError } from "next-auth";
-import bcrypt from "bcryptjs";
-import { db } from "@/server/db";
+import { registerUser } from "@/server/services/account";
 import { signIn } from "@/server/auth";
-import { credentialsSchema, registerSchema } from "@/lib/validation/auth";
+import { registerSchema } from "@/lib/validation";
+import { AppError } from "@/server/http";
 
-export type AuthState = { error?: string };
-
-export async function signInAction(
-  _prev: AuthState,
-  formData: FormData,
-): Promise<AuthState> {
-  const parsed = credentialsSchema.safeParse({
-    email: formData.get("email"),
-    password: formData.get("password"),
-  });
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
-  }
-
-  try {
-    await signIn("credentials", { ...parsed.data, redirectTo: "/" });
-  } catch (error) {
-    if (error instanceof AuthError) {
-      return { error: "Wrong email or password. Try again." };
-    }
-    throw error; // redirect
-  }
-  return {};
-}
+export type AuthFormState = { error?: string } | undefined;
 
 export async function registerAction(
-  _prev: AuthState,
+  _prev: AuthFormState,
   formData: FormData,
-): Promise<AuthState> {
+): Promise<AuthFormState> {
   const parsed = registerSchema.safeParse({
     name: formData.get("name"),
     email: formData.get("email"),
@@ -42,30 +18,52 @@ export async function registerAction(
     role: formData.get("role") ?? "STUDENT",
   });
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return { error: parsed.error.issues[0]?.message ?? "Invalid details." };
   }
-  const { name, password, role } = parsed.data;
-  // Store emails normalized (trimmed + lowercased) so casing never causes
-  // duplicate accounts or failed logins.
-  const email = parsed.data.email.trim().toLowerCase();
-
-  const existing = await db.user.findFirst({
-    where: { email: { equals: email, mode: "insensitive" } },
-  });
-  if (existing) {
-    return { error: "An account with that email already exists." };
-  }
-
-  const passwordHash = await bcrypt.hash(password, 10);
-  await db.user.create({ data: { name, email, passwordHash, role } });
 
   try {
-    await signIn("credentials", { email, password, redirectTo: "/" });
-  } catch (error) {
-    if (error instanceof AuthError) {
-      return { error: "Account created — please sign in." };
-    }
-    throw error; // redirect
+    await registerUser(parsed.data);
+  } catch (err) {
+    if (err instanceof AppError) return { error: err.message };
+    return { error: "Could not create your account. Please try again." };
   }
-  return {};
+
+  // Sign the new user in and redirect to their dashboard.
+  await signIn("credentials", {
+    email: parsed.data.email,
+    password: parsed.data.password,
+    redirectTo: "/dashboard",
+  });
+  return undefined;
+}
+
+export async function signInAction(
+  _prev: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const email = String(formData.get("email") ?? "");
+  const password = String(formData.get("password") ?? "");
+  if (!email || !password) {
+    return { error: "Enter your email and password." };
+  }
+  try {
+    await signIn("credentials", {
+      email,
+      password,
+      redirectTo: "/dashboard",
+    });
+  } catch (err) {
+    // next-auth throws a redirect on success; re-throw those.
+    if (err instanceof Error && err.message === "NEXT_REDIRECT") throw err;
+    if (
+      typeof err === "object" &&
+      err !== null &&
+      "digest" in err &&
+      String((err as { digest?: string }).digest).startsWith("NEXT_REDIRECT")
+    ) {
+      throw err;
+    }
+    return { error: "Invalid email or password." };
+  }
+  return undefined;
 }

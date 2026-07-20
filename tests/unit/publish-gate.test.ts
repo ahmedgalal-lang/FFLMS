@@ -1,50 +1,63 @@
 import { describe, it, expect } from "vitest";
 import {
-  canPublish,
-  publishBlockers,
-  type PublishSnapshot,
-} from "@/server/services/publish-logic";
+  publishReadiness,
+  isPublishable,
+  type PublishCandidate,
+} from "@/server/services/publish";
 
-const ready: PublishSnapshot = {
-  title: "Foundations of Data Analysis",
-  summary: "Go from raw data to insight.",
-  description: "A hands-on intro.",
-  categoryId: "cat_1",
-  modules: [{ lessons: [{ contentBlockCount: 2 }] }],
-};
+const lesson = (id: string, deleted = false) => ({
+  id,
+  deletedAt: deleted ? new Date() : null,
+});
 
-describe("publish gate (FR-008)", () => {
-  it("allows publishing a complete course", () => {
-    expect(canPublish(ready)).toBe(true);
-    expect(publishBlockers(ready)).toEqual([]);
-  });
-
-  it("blocks a course with no modules/lessons", () => {
-    const c = { ...ready, modules: [] };
-    expect(canPublish(c)).toBe(false);
-    expect(publishBlockers(c)).toContain(
-      "At least one module with at least one lesson",
-    );
-  });
-
-  it("blocks a course with a lesson that has no content", () => {
-    const c: PublishSnapshot = {
-      ...ready,
-      modules: [{ lessons: [{ contentBlockCount: 0 }] }],
+describe("publishReadiness (FR-008)", () => {
+  it("passes a complete course", () => {
+    const course: PublishCandidate = {
+      title: "Real Course",
+      summary: "A good summary",
+      modules: [{ lessons: [lesson("l1")] }],
     };
-    expect(canPublish(c)).toBe(false);
-    expect(publishBlockers(c)).toContain(
-      "Every lesson has at least one content block",
-    );
+    expect(publishReadiness(course)).toEqual([]);
+    expect(isPublishable(course)).toBe(true);
   });
 
-  it("blocks a course missing metadata (no category)", () => {
-    const c = { ...ready, categoryId: null };
-    expect(canPublish(c)).toBe(false);
+  it("blocks a course with no modules", () => {
+    const course: PublishCandidate = {
+      title: "T",
+      summary: "S",
+      modules: [],
+    };
+    expect(isPublishable(course)).toBe(false);
+    expect(publishReadiness(course)).toContain("Add at least one module.");
   });
 
-  it("blocks a course with a too-short title", () => {
-    const c = { ...ready, title: "Hi" };
-    expect(canPublish(c)).toBe(false);
+  it("blocks a course whose only module has no lessons", () => {
+    const course: PublishCandidate = {
+      title: "T",
+      summary: "S",
+      modules: [{ lessons: [] }],
+    };
+    expect(publishReadiness(course)).toContain("Add at least one lesson.");
+  });
+
+  it("does not count soft-deleted lessons toward completeness", () => {
+    const course: PublishCandidate = {
+      title: "T",
+      summary: "S",
+      modules: [{ lessons: [lesson("l1", true)] }],
+    };
+    expect(isPublishable(course)).toBe(false);
+    expect(publishReadiness(course)).toContain("Add at least one lesson.");
+  });
+
+  it("requires title and summary", () => {
+    const course: PublishCandidate = {
+      title: "  ",
+      summary: "",
+      modules: [{ lessons: [lesson("l1")] }],
+    };
+    const problems = publishReadiness(course);
+    expect(problems).toContain("A title is required.");
+    expect(problems).toContain("A summary is required.");
   });
 });

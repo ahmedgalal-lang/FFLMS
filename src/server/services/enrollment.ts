@@ -1,47 +1,78 @@
-import "server-only";
 import { db } from "@/server/db";
-import { authorize, type Actor } from "@/server/access/authorize";
+import { authorize, type Principal } from "@/server/access/policy";
+import { NotFoundError } from "@/server/http";
+import { loadCourseForAuthz } from "@/server/services/course";
 
 /**
- * Enroll a student in a published course. Idempotent per (student, course)
- * (spec FR-011): a second call returns the existing active enrollment.
+ * Enroll a student in a published course. Idempotent: enrolling twice returns
+ * the existing active enrollment rather than creating a duplicate (FR-011),
+ * enforced by the unique (studentId, courseId) constraint + upsert.
  */
-export async function enroll(actor: Actor | null, courseId: string) {
-  authorize(actor, "course:enroll");
+export async function enroll(principal: Principal, courseId: string) {
+  const course = await loadCourseForAuthz(courseId);
+  authorize(principal, { type: "enrollment:create", course });
 
-  const course = await db.course.findUnique({ where: { id: courseId } });
-  if (!course || course.status !== "PUBLISHED" || course.deletedAt) {
-    throw new Error("Course is not available for enrollment");
-  }
-
-  const existing = await db.enrollment.findUnique({
-    where: { studentId_courseId: { studentId: actor!.id, courseId } },
+  const enrollment = await db.enrollment.upsert({
+    where: {
+      studentId_courseId: { studentId: principal.id, courseId },
+    },
+    update: {}, // idempotent — do not reset progress on re-enroll
+    create: { studentId: principal.id, courseId, status: "ACTIVE" },
   });
-  if (existing) return { enrollment: existing, created: false };
 
-  const enrollment = await db.enrollment.create({
-    data: { studentId: actor!.id, courseId },
-  });
-  return { enrollment, created: true };
+  // Best-effort enrollment notification.
+  await db.notification.create({
+    data: {
+      userId: principal.id,
+      type: "ENROLLMENT",
+      title: "You're enrolled",
+      body: "Your enrollment is confirmed. Start learning any time.",
+      linkUrl: `/my-learning`,
+    },
+  }).catch(() => undefined);
+
+  return enrollment;
 }
 
-/** "My Learning" list for the current student. */
-export async function listMyEnrollments(actor: Actor | null) {
-  if (!actor) return [];
+export async function getEnrollment(principal: Principal, courseId: string) {
+  return db.enrollment.findUnique({
+    where: { studentId_courseId: { studentId: principal.id, courseId } },
+  });
+}
+
+/** "My Learning" — the student's enrollments with course + progress. */
+export async function listMyEnrollments(principal: Principal) {
   return db.enrollment.findMany({
-    where: { studentId: actor.id },
+    where: { studentId: principal.id },
     orderBy: { enrolledAt: "desc" },
     include: {
       course: {
-        include: { instructor: { select: { name: true } }, category: true },
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          summary: true,
+          coverImageUrl: true,
+          instructor: { select: { name: true } },
+        },
       },
     },
   });
 }
 
-export async function getEnrollment(actor: Actor | null, courseId: string) {
-  if (!actor) return null;
-  return db.enrollment.findUnique({
-    where: { studentId_courseId: { studentId: actor.id, courseId } },
+/** Load an enrollment by id and authorize the acting student owns it. */
+export async function loadOwnedEnrollment(
+  principal: Principal,
+  enrollmentId: string,
+) {
+  const enrollment = await db.enrollment.findUnique({
+    where: { id: enrollmentId },
+    select: { id: true, studentId: true, courseId: true },
   });
+  if (!enrollment) throw new NotFoundError("Enrollment not found.");
+  authorize(principal, {
+    type: "enrollment:read",
+    enrollment: { studentId: enrollment.studentId },
+  });
+  return enrollment;
 }

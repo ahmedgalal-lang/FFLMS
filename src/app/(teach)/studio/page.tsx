@@ -1,62 +1,78 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Badge, ButtonLink, Card } from "@/components/ui";
-import { currentActor } from "@/server/auth";
+import { requirePrincipal } from "@/server/auth";
 import { listInstructorCourses } from "@/server/services/course";
+import { db } from "@/server/db";
+import { Badge } from "@/components/ui/badge";
+import { CreateCourseDialog } from "@/components/course/create-course-dialog";
+import type { CourseStatus } from "@prisma/client";
 
 export const metadata: Metadata = { title: "Studio" };
 
-const statusTone = {
-  DRAFT: "neutral",
+const statusVariant: Record<
+  CourseStatus,
+  "default" | "secondary" | "success" | "warning"
+> = {
+  DRAFT: "secondary",
   IN_REVIEW: "warning",
   PUBLISHED: "success",
-  ARCHIVED: "neutral",
-} as const;
+  ARCHIVED: "secondary",
+};
 
 export default async function StudioPage() {
-  const actor = await currentActor();
-  const courses = await listInstructorCourses(actor);
+  const principal = await requirePrincipal();
+  const [courses, categories] = await Promise.all([
+    listInstructorCourses(principal),
+    db.category.findMany({ orderBy: { name: "asc" } }),
+  ]);
 
   return (
-    <main className="mx-auto max-w-5xl px-5 py-10">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Studio</h1>
-          <p className="mt-1 text-ink-2">Create and manage your courses.</p>
+          <h1 className="text-2xl font-bold">Your courses</h1>
+          <p className="text-sm text-muted-foreground">
+            Create, structure, and publish courses.
+          </p>
         </div>
-        <ButtonLink href="/studio/new">+ New course</ButtonLink>
+        <CreateCourseDialog categories={categories} />
       </div>
 
       {courses.length === 0 ? (
-        <Card className="mt-8 p-10 text-center">
-          <p className="text-ink-2">No courses yet. Create your first one.</p>
-          <ButtonLink href="/studio/new" className="mt-4">
-            + New course
-          </ButtonLink>
-        </Card>
+        <div className="rounded-lg border border-dashed p-12 text-center">
+          <p className="text-muted-foreground">
+            You haven&apos;t created any courses yet.
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Use “New course” to get started.
+          </p>
+        </div>
       ) : (
-        <div className="mt-8 flex flex-col gap-3">
-          {courses.map((c) => (
-            <Link key={c.id} href={`/studio/${c.id}`}>
-              <Card className="flex items-center justify-between p-4 transition-colors hover:border-brand">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="font-semibold tracking-tight">{c.title}</h2>
-                    <Badge tone={statusTone[c.status]}>
-                      {c.status.replace("_", " ").toLowerCase()}
-                    </Badge>
-                  </div>
-                  <p className="mt-1 text-sm text-ink-3">
-                    {c.category?.name ?? "Uncategorized"} ·{" "}
-                    <span className="tnum">{c._count.enrollments}</span> enrolled
-                  </p>
-                </div>
-                <span className="text-ink-3">Edit →</span>
-              </Card>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {courses.map((course) => (
+            <Link
+              key={course.id}
+              href={`/studio/${course.id}`}
+              className="rounded-lg border bg-card p-5 transition-colors hover:border-primary"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <h2 className="font-semibold leading-tight">{course.title}</h2>
+                <Badge variant={statusVariant[course.status]}>
+                  {course.status.toLowerCase().replace("_", " ")}
+                </Badge>
+              </div>
+              <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
+                {course.summary}
+              </p>
+              <div className="mt-4 flex gap-4 text-xs text-muted-foreground">
+                <span>{course._count.modules} modules</span>
+                <span>{course._count.enrollments} enrolled</span>
+                {course.category && <span>{course.category.name}</span>}
+              </div>
             </Link>
           ))}
         </div>
       )}
-    </main>
+    </div>
   );
 }

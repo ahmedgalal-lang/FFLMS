@@ -1,5 +1,5 @@
-# Lumen LMS — production image for CranL (Dockerfile build type) or any Docker host.
-# Multi-stage: install deps → build Next.js → lean runner that migrates on boot.
+# LMS Platform — production image. Multi-stage: install deps → build Next.js →
+# lean runner that applies migrations on boot. Uses pnpm via corepack.
 
 FROM node:20-bookworm-slim AS base
 WORKDIR /app
@@ -8,17 +8,18 @@ RUN apt-get update -y \
   && apt-get install -y --no-install-recommends openssl ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 ENV NEXT_TELEMETRY_DISABLED=1
+RUN corepack enable
 
 # ---- deps: full install (incl. build tooling) ----
 FROM base AS deps
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml* ./
+RUN pnpm install --frozen-lockfile
 
 # ---- build: generate Prisma client + next build ----
 FROM base AS build
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npm run build
+RUN pnpm run build
 
 # ---- runner: what actually ships ----
 FROM base AS runner
@@ -33,6 +34,5 @@ COPY --from=build /app/package.json /app/next.config.ts ./
 COPY docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh
 
-# CranL: set the app "Port" to match this (3000). The app binds 0.0.0.0.
 EXPOSE 3000
 ENTRYPOINT ["./docker-entrypoint.sh"]

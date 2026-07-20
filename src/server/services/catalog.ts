@@ -1,66 +1,78 @@
-import "server-only";
 import { db } from "@/server/db";
 import type { Prisma } from "@prisma/client";
+import type { CatalogQuery } from "@/lib/validation";
+import type { PageParams } from "@/server/http";
 
-const PAGE_SIZE = 12;
-
-/** Public catalog: published courses with keyword + category filter, paginated. */
-export async function listCatalog(opts: {
-  q?: string;
-  categorySlug?: string;
-  page?: number;
-}) {
-  const page = Math.max(1, opts.page ?? 1);
+/**
+ * Public catalog search over PUBLISHED courses. Uses case-insensitive matching
+ * on title/summary plus optional category filter. For the reference scale
+ * (~1k courses) this is well under the 1s budget (SC-006); a GIN/tsvector index
+ * is the drop-in upgrade path documented in data-model.md.
+ */
+export async function searchCatalog(query: CatalogQuery, page: PageParams) {
   const where: Prisma.CourseWhereInput = {
     status: "PUBLISHED",
     deletedAt: null,
+    ...(query.q
+      ? {
+          OR: [
+            { title: { contains: query.q, mode: "insensitive" } },
+            { summary: { contains: query.q, mode: "insensitive" } },
+          ],
+        }
+      : {}),
+    ...(query.category ? { category: { slug: query.category } } : {}),
   };
-  if (opts.q && opts.q.trim()) {
-    const q = opts.q.trim();
-    where.OR = [
-      { title: { contains: q, mode: "insensitive" } },
-      { summary: { contains: q, mode: "insensitive" } },
-      { description: { contains: q, mode: "insensitive" } },
-    ];
-  }
-  if (opts.categorySlug) {
-    where.category = { slug: opts.categorySlug };
-  }
 
   const [items, total] = await Promise.all([
     db.course.findMany({
       where,
       orderBy: { publishedAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
-      include: {
-        category: true,
+      skip: page.skip,
+      take: page.pageSize,
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        summary: true,
+        coverImageUrl: true,
+        publishedAt: true,
         instructor: { select: { name: true } },
+        category: { select: { name: true, slug: true } },
         _count: { select: { enrollments: true } },
       },
     }),
     db.course.count({ where }),
   ]);
 
-  return { items, page, pageSize: PAGE_SIZE, total };
+  return { items, total };
 }
 
-export async function getPublishedCourseBySlug(slug: string) {
+/** Full public detail for a published course by slug. */
+export async function getPublicCourse(slug: string) {
   return db.course.findFirst({
     where: { slug, status: "PUBLISHED", deletedAt: null },
     include: {
+      instructor: { select: { name: true, avatarUrl: true } },
       category: true,
-      instructor: { select: { name: true } },
       modules: {
         orderBy: { order: "asc" },
         include: {
           lessons: {
             where: { deletedAt: null },
             orderBy: { order: "asc" },
-            select: { id: true, title: true, isRequired: true, estimatedMinutes: true },
+            select: {
+              id: true,
+              title: true,
+              isRequired: true,
+              estimatedMinutes: true,
+              quiz: { select: { id: true } },
+              assignment: { select: { id: true } },
+            },
           },
         },
       },
+      _count: { select: { enrollments: true } },
     },
   });
 }

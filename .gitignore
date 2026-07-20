@@ -8,7 +8,6 @@
 /out/
 /build
 next-env.d.ts
-*.tsbuildinfo
 
 # Env & secrets
 .env
@@ -26,3 +25,9 @@ next-env.d.ts
 # OS / editor
 .DS_Store
 *.log
+
+# Prisma generated
+/src/generated
+
+# TS incremental build
+*.tsbuildinfo

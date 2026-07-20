@@ -1,69 +1,66 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { ButtonLink, Card, ProgressBar, Badge } from "@/components/ui";
-import { currentActor } from "@/server/auth";
+import Link from "next/link";
+import { GraduationCap } from "lucide-react";
+import { requirePrincipal } from "@/server/auth";
 import { listMyEnrollments } from "@/server/services/enrollment";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = { title: "My Learning" };
 
 export default async function MyLearningPage() {
-  const actor = await currentActor();
-  if (!actor) redirect("/sign-in");
-  const enrollments = await listMyEnrollments(actor);
+  const principal = await requirePrincipal();
+  const enrollments = await listMyEnrollments(principal);
 
   return (
-    <main className="mx-auto max-w-5xl px-5 py-10">
-      <h1 className="text-2xl font-semibold tracking-tight">My Learning</h1>
-      <p className="mt-1 text-ink-2">
-        {enrollments.length} enrolled course{enrollments.length === 1 ? "" : "s"}
-      </p>
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">My Learning</h1>
 
       {enrollments.length === 0 ? (
-        <Card className="mt-8 p-10 text-center">
-          <p className="text-ink-2">You haven&rsquo;t enrolled in anything yet.</p>
-          <ButtonLink href="/courses" className="mt-4">
-            Browse the catalog
-          </ButtonLink>
-        </Card>
+        <div className="rounded-lg border border-dashed p-12 text-center">
+          <GraduationCap className="mx-auto h-10 w-10 text-muted-foreground" />
+          <p className="mt-3 text-muted-foreground">
+            You haven&apos;t enrolled in any courses yet.
+          </p>
+          <Button asChild className="mt-4">
+            <Link href="/courses">Browse the catalog</Link>
+          </Button>
+        </div>
       ) : (
-        <div className="mt-8 grid gap-5 sm:grid-cols-2">
-          {enrollments.map((e) => (
-            <Card key={e.id} className="flex flex-col p-5">
-              <div className="mb-2 flex items-center justify-between">
-                {e.course.category ? (
-                  <Badge tone="brand">{e.course.category.name}</Badge>
-                ) : (
-                  <span />
-                )}
-                {e.status === "COMPLETED" ? (
-                  <Badge tone="success">Completed</Badge>
-                ) : (
-                  <Badge tone="warning">In progress</Badge>
-                )}
-              </div>
-              <h2 className="font-semibold tracking-tight text-balance">
-                {e.course.title}
-              </h2>
-              <p className="mt-1 text-sm text-ink-3">
-                {e.course.instructor.name}
-              </p>
-              <div className="mt-4">
-                <div className="mb-1.5 flex items-center justify-between text-xs">
-                  <span className="font-semibold">{e.progressPercent}% complete</span>
+        <div className="space-y-3">
+          {enrollments.map((enr) => (
+            <Link
+              key={enr.id}
+              href={`/learn/${enr.course.slug}`}
+              className="flex flex-col gap-3 rounded-lg border bg-card p-5 transition-colors hover:border-primary sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h2 className="font-semibold">{enr.course.title}</h2>
+                  {enr.status === "COMPLETED" && (
+                    <Badge variant="success">Completed</Badge>
+                  )}
                 </div>
-                <ProgressBar percent={e.progressPercent} />
+                <p className="text-sm text-muted-foreground">
+                  {enr.course.instructor.name}
+                </p>
+                <div className="mt-3 flex items-center gap-3">
+                  <Progress value={enr.progressPercent} className="max-w-xs" />
+                  <span className="text-xs text-muted-foreground">
+                    {enr.progressPercent}%
+                  </span>
+                </div>
               </div>
-              <ButtonLink
-                href={`/learn/${e.course.slug}`}
-                variant="secondary"
-                className="mt-4"
-              >
-                {e.progressPercent > 0 ? "Continue" : "Start"}
-              </ButtonLink>
-            </Card>
+              <Button variant="outline" size="sm" className="shrink-0" asChild>
+                <span>
+                  {enr.progressPercent > 0 ? "Continue" : "Start"}
+                </span>
+              </Button>
+            </Link>
           ))}
         </div>
       )}
-    </main>
+    </div>
   );
 }

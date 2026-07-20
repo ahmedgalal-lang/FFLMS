@@ -1,36 +1,22 @@
-import "@/env"; // normalize provider env names (Supabase → DATABASE_URL) first
 import { PrismaClient } from "@prisma/client";
 
 /**
- * Prisma client singleton, lazily constructed. Building the client is deferred
- * until first use so that `next build` (static page collection) never
- * instantiates it — avoiding spurious "DATABASE_URL not found" logs when the
- * database isn't configured at build time.
+ * Prisma client singleton. In development Next.js hot-reloads modules, which
+ * would otherwise create a new client (and connection pool) on every reload.
  */
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-function createClient(): PrismaClient {
-  const client =
-    globalForPrisma.prisma ??
-    new PrismaClient({
-      log:
-        process.env.NODE_ENV === "development"
-          ? ["warn", "error"]
-          : ["error"],
-    });
-  if (process.env.NODE_ENV !== "production") {
-    globalForPrisma.prisma = client;
-  }
-  return client;
+export const db =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    log:
+      process.env.NODE_ENV === "development"
+        ? ["error", "warn"]
+        : ["error"],
+  });
+
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.prisma = db;
 }
-
-let instance: PrismaClient | undefined;
-
-export const db: PrismaClient = new Proxy({} as PrismaClient, {
-  get(_target, prop, receiver) {
-    instance ??= createClient();
-    return Reflect.get(instance, prop, receiver);
-  },
-});

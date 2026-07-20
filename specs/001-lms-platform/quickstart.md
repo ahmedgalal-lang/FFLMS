@@ -1,103 +1,76 @@
 # Quickstart: LMS Platform
 
-Local setup and smoke test for the LMS Next.js app. This document is written
-against the plan's structure; it becomes runnable once the Setup + Foundational
-tasks are complete.
+Local setup and smoke test for the LMS MVP (US1 authoring + US2 enroll & learn).
 
 ## Prerequisites
 
-- Node.js 20+
-- pnpm (or npm)
-- Docker (for local PostgreSQL + Redis) or a reachable Postgres 16 instance
-- An S3-compatible bucket + credentials (MinIO works locally)
+- Node.js 20+ (22 recommended) and `pnpm` 10+
+- A PostgreSQL 16 database. Either:
+  - `docker compose up -d postgres` (uses `docker-compose.yml`), or
+  - any local Postgres — set `DATABASE_URL` accordingly.
 
-## 1. Install
+## 1. Install & configure
 
 ```bash
 pnpm install
+cp .env.example .env         # then edit DATABASE_URL / AUTH_SECRET
+# generate a real secret:
+#   openssl rand -base64 32
 ```
 
-## 2. Environment
-
-Copy the example and fill values. Env vars are validated by `src/config/env.ts`
-(Zod) at boot — the app refuses to start if any are missing/invalid.
+## 2. Database
 
 ```bash
-cp .env.example .env.local
+pnpm prisma migrate deploy   # apply committed migrations
+pnpm db:seed                 # admin/instructor/student + a sample course
 ```
 
-Required keys:
+Seeded accounts (password `password123`):
 
-```dotenv
-DATABASE_URL=postgresql://lms:lms@localhost:5432/lms
-AUTH_SECRET=            # openssl rand -base64 32
-AUTH_URL=http://localhost:3000
-# OAuth (at least one provider)
-AUTH_GOOGLE_ID=
-AUTH_GOOGLE_SECRET=
-# Object storage
-S3_ENDPOINT=http://localhost:9000
-S3_BUCKET=lms-uploads
-S3_ACCESS_KEY_ID=
-S3_SECRET_ACCESS_KEY=
-# Optional
-REDIS_URL=redis://localhost:6379
-EMAIL_PROVIDER_API_KEY=
-```
+| Role       | Email               |
+| ---------- | ------------------- |
+| Admin      | admin@lms.test      |
+| Instructor | instructor@lms.test |
+| Student    | student@lms.test    |
 
-## 3. Start infra (Docker)
+## 3. Run
 
 ```bash
-docker compose up -d   # postgres, redis, minio
+pnpm dev            # http://localhost:3000
 ```
 
-## 4. Database
+## 4. Smoke test (MVP journey)
+
+1. Sign in as `instructor@lms.test` -> **Studio** -> **New course**.
+2. Add a module, add two lessons, add a text/video content block.
+3. **Publish** (disabled until the completeness gate passes).
+4. Sign out, sign in as `student@lms.test`.
+5. **Catalog** -> open the course -> **Enrol** -> land in the player.
+6. **Complete & continue** through lessons; watch progress reach 100%.
+7. Revisit **My Learning** — progress and completion persist.
+
+## 5. Quality gates
 
 ```bash
-pnpm prisma migrate dev      # apply migrations
-pnpm prisma db seed          # demo admin, instructor, student, sample course
+pnpm typecheck      # tsc --noEmit (strict)
+pnpm lint           # eslint
+pnpm test           # vitest unit + integration (needs DATABASE_URL)
+pnpm build          # next production build
+pnpm test:e2e       # playwright (builds + starts, then drives a browser)
 ```
 
-Seed creates:
-- `admin@example.com` / `Password123!` (ADMIN)
-- `instructor@example.com` / `Password123!` (INSTRUCTOR) with one published course
-- `student@example.com` / `Password123!` (STUDENT)
-
-## 5. Run
+For e2e against an already-running server (and a preinstalled Chromium):
 
 ```bash
-pnpm dev        # http://localhost:3000
+E2E_BASE_URL=http://localhost:3000 \
+PW_CHROMIUM_PATH=/path/to/chromium \
+pnpm exec playwright test
 ```
 
-## 6. Smoke test (maps to P1/P2 acceptance)
+## Notes
 
-1. **Author (US1)**: sign in as instructor → Studio → create a course → add a
-   module + two lessons (text + video) → publish. Confirm it appears in the
-   catalog.
-2. **Learn (US2)**: sign in as student → open the catalog → enroll → complete a
-   lesson → confirm progress % increases and "resume" points to the next lesson.
-3. **Quiz (US3)**: as instructor add a quiz; as student submit → confirm score
-   and pass/fail render within ~2s.
-4. **Verify cert (US5)**: complete the course as the student → copy the
-   certificate code → open `/verify` and confirm it validates.
-
-## 7. Quality gates (run before pushing)
-
-```bash
-pnpm typecheck     # tsc --noEmit (strict)
-pnpm lint          # eslint
-pnpm test          # vitest unit + integration
-pnpm test:e2e      # playwright (P1/P2 journeys)
-pnpm build         # next build
-```
-
-All six must pass — they mirror the CI gates in the constitution.
-
-## Troubleshooting
-
-- **App won't boot / env error**: a required var failed Zod validation — read the
-  printed field list.
-- **DB connection refused**: ensure `docker compose up -d` is running and
-  `DATABASE_URL` host/port match.
-- **Uploads fail**: verify the S3 bucket exists and credentials are set; MinIO
-  console is at `http://localhost:9001`.
+- File uploads use presigned URLs (`POST /api/uploads`). Without S3/MinIO
+  configured, text and video content still work; file blocks return a clear
+  "storage not configured" error.
+- Authorization is enforced server-side on every mutation via `authorize()` in
+  `src/server/access/policy.ts`.

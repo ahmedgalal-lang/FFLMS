@@ -3,21 +3,19 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Lumen LMS",
-    template: "%s · Lumen LMS",
+    default: "LMS Platform",
+    template: "%s · LMS Platform",
   },
   description:
-    "Author courses, enroll, and learn with tracked progress — a Next.js Learning Management System.",
+    "A multi-role Learning Management System — author courses, enroll, learn, and earn certificates.",
 };
 
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode;
-}) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body className="min-h-screen antialiased">{children}</body>
     </html>
   );
 }

@@ -1,15 +1,30 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { currentActor } from "@/server/auth";
+import { requirePrincipal } from "@/server/auth";
 import { markLessonComplete } from "@/server/services/progress";
+import { AppError } from "@/server/http";
+import { AuthorizationError } from "@/server/access/policy";
 
-export async function completeLessonAction(formData: FormData) {
-  const lessonId = String(formData.get("lessonId") ?? "");
-  const slug = String(formData.get("slug") ?? "");
-  if (!lessonId || !slug) return;
+export type CompleteState = {
+  error?: string;
+  progressPercent?: number;
+  completed?: boolean;
+};
 
-  const actor = await currentActor();
-  await markLessonComplete(actor, lessonId);
-  revalidatePath(`/learn/${slug}`);
+export async function completeLessonAction(
+  slug: string,
+  lessonId: string,
+): Promise<CompleteState> {
+  const principal = await requirePrincipal();
+  try {
+    const res = await markLessonComplete(principal, lessonId);
+    revalidatePath(`/learn/${slug}`);
+    revalidatePath("/my-learning");
+    return res;
+  } catch (err) {
+    if (err instanceof AuthorizationError) return { error: err.message };
+    if (err instanceof AppError) return { error: err.message };
+    return { error: "Could not save your progress." };
+  }
 }

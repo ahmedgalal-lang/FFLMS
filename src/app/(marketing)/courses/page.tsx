@@ -1,45 +1,60 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Card } from "@/components/ui";
-import { CourseCard } from "@/components/course-card";
-import { listCatalog, listCategories } from "@/server/services/catalog";
+import { Search } from "lucide-react";
+import { searchCatalog, listCategories } from "@/server/services/catalog";
+import { catalogQuerySchema } from "@/lib/validation";
+import { parsePagination, pageMeta } from "@/server/http";
+import { CourseCard } from "@/components/course/course-card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = { title: "Course catalog" };
 
 export default async function CatalogPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; category?: string; page?: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const sp = await searchParams;
-  const page = Number(sp.page ?? "1") || 1;
-  const [{ items, total, pageSize }, categories] = await Promise.all([
-    listCatalog({ q: sp.q, categorySlug: sp.category, page }),
+  const query = catalogQuerySchema.parse({
+    q: sp.q,
+    category: sp.category,
+    page: sp.page,
+  });
+  const pagination = parsePagination(
+    new URLSearchParams({ page: String(query.page ?? 1) }),
+  );
+  const [{ items, total }, categories] = await Promise.all([
+    searchCatalog(query, pagination),
     listCategories(),
   ]);
-  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const meta = pageMeta(total, pagination);
 
   return (
-    <main className="mx-auto max-w-6xl px-5 py-10">
-      <h1 className="text-2xl font-semibold tracking-tight">Course catalog</h1>
-      <p className="mt-1 text-ink-2">
-        {total} published course{total === 1 ? "" : "s"}
-      </p>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Course catalog</h1>
+        <p className="text-sm text-muted-foreground">
+          {total} published {total === 1 ? "course" : "courses"}
+        </p>
+      </div>
 
-      <form className="mt-6 flex flex-wrap gap-3" role="search">
-        <input
-          type="search"
-          name="q"
-          defaultValue={sp.q ?? ""}
-          placeholder="Search courses…"
-          aria-label="Search courses"
-          className="min-w-56 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
-        />
+      <form className="flex flex-wrap gap-2" action="/courses">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            name="q"
+            defaultValue={query.q ?? ""}
+            placeholder="Search courses…"
+            className="pl-9"
+            aria-label="Search courses"
+          />
+        </div>
         <select
           name="category"
-          defaultValue={sp.category ?? ""}
+          defaultValue={query.category ?? ""}
           aria-label="Filter by category"
-          className="rounded-lg border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
+          className="h-10 rounded-md border border-input bg-background px-3 text-sm"
         >
           <option value="">All categories</option>
           {categories.map((c) => (
@@ -48,47 +63,41 @@ export default async function CatalogPage({
             </option>
           ))}
         </select>
-        <button className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-brand-ink hover:bg-brand-strong">
-          Search
-        </button>
+        <Button type="submit">Search</Button>
       </form>
 
       {items.length === 0 ? (
-        <Card className="mt-8 p-10 text-center text-ink-2">
+        <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
           No courses match your search.
-        </Card>
+        </div>
       ) : (
-        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((c) => (
-            <CourseCard key={c.id} course={c} />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {items.map((course) => (
+            <CourseCard key={course.id} course={course} />
           ))}
         </div>
       )}
 
-      {pages > 1 ? (
-        <nav className="mt-8 flex items-center justify-center gap-2" aria-label="Pagination">
-          {Array.from({ length: pages }, (_, i) => i + 1).map((n) => {
+      {meta.totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 pt-4">
+          {Array.from({ length: meta.totalPages }, (_, i) => i + 1).map((p) => {
             const params = new URLSearchParams();
-            if (sp.q) params.set("q", sp.q);
-            if (sp.category) params.set("category", sp.category);
-            params.set("page", String(n));
+            if (query.q) params.set("q", query.q);
+            if (query.category) params.set("category", query.category);
+            params.set("page", String(p));
             return (
-              <Link
-                key={n}
-                href={`/courses?${params.toString()}`}
-                aria-current={n === page ? "page" : undefined}
-                className={`rounded-lg border px-3 py-1.5 text-sm tnum ${
-                  n === page
-                    ? "border-transparent bg-brand text-brand-ink"
-                    : "border-line bg-surface text-ink-2 hover:border-ink-3"
-                }`}
+              <Button
+                key={p}
+                asChild
+                variant={p === meta.page ? "default" : "outline"}
+                size="sm"
               >
-                {n}
-              </Link>
+                <Link href={`/courses?${params.toString()}`}>{p}</Link>
+              </Button>
             );
           })}
-        </nav>
-      ) : null}
-    </main>
+        </div>
+      )}
+    </div>
   );
 }

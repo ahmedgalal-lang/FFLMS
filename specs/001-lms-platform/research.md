@@ -142,24 +142,14 @@ record the decision + rationale + rejected alternatives for each. All
   serverless-only DB access without pooling (connection exhaustion risk — use a
   pooler if serverless).
 
-## Resolved Decisions (from analysis remediation)
-
-- **Attempt scoring (FR-019)**: when multiple attempts are allowed, the
-  **highest-scoring** attempt is the attempt of record; configurable per quiz,
-  default = highest.
-- **Short-answer grading (FR-018)**: auto-graded by case-insensitive,
-  whitespace-trimmed exact match against accepted answer(s), then flagged for
-  optional instructor manual override before the score is final.
-- **Background jobs (plan §Architecture)**: Redis/BullMQ queue is the standard
-  path for certificate PDF generation, notification fan-out, and email; a
-  **synchronous fallback is acceptable at v1 volumes** and each job task must run
-  either way (see tasks T063, T072, T076).
-
 ## Open Questions Deferred to Clarification (non-blocking for MVP)
 
 - Exact certificate template/branding and whether PDF generation is server-side
-  vs. on-demand render (issuance logic and verification are already specified;
-  only the visual template is open).
+  vs. on-demand render.
+- Late-submission and best-vs-last-attempt policy defaults (per-course
+  configurable; sensible defaults chosen for MVP).
+- Whether short-answer questions require manual review by default or accept exact
+  match in v1.
 
-The item above has a safe MVP default (server-rendered PDF from an HTML
-template) and does not block P1/P2 delivery.
+All items above have safe MVP defaults documented in `spec.md` Assumptions and
+do not block P1/P2 delivery.

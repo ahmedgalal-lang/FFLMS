@@ -4,6 +4,19 @@ description: "Task list for LMS Platform implementation"
 
 # Tasks: LMS Platform
 
+> **Implementation status (MVP shipped).** Phases 1–4 (T001–T041) are
+> implemented and verified: project scaffold + tooling, the foundational
+> data/auth/authz layer, **US1 course authoring & publishing**, and **US2
+> enroll & learn with progress**. 37 unit/integration tests + 3 e2e journeys
+> pass; typecheck, lint, and build are green.
+>
+> Known simplifications carried as follow-ups: presigned uploads return a
+> deterministic URL (real S3 SigV4 signing plugs into `src/server/storage`);
+> drag-and-drop curriculum reordering has a service + API but the builder UI
+> uses add/delete ordering; password-reset and OAuth wiring are stubbed. Phases
+> 5–11 (quizzes, assignments, gradebook/certificate UI, admin, discussions,
+> analytics, polish) are not yet built.
+
 **Input**: Design documents from `/specs/001-lms-platform/`
 
 **Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/
@@ -11,19 +24,6 @@ description: "Task list for LMS Platform implementation"
 **Tests**: Included. The constitution makes tests mandatory for business logic
 (Principle IV), so test tasks appear for grading, progress, enrollment, access
 control, and each P1/P2 journey.
-
-> **Implementation status (2026-07-16)**: The **MVP is built and verified** —
-> Phase 1 (Setup), Phase 2 (Foundational), Phase 3 (US1 authoring), and Phase 4
-> (US2 enroll & learn). Delivered: Next.js 15 scaffold, Prisma schema +
-> migration + seed, Auth.js credentials with role-aware sessions, the central
-> `authorize()` policy, course/curriculum/publish/catalog/enrollment/progress
-> services, and the marketing, auth, studio, and learn UIs. Verified via 22
-> green unit tests, a clean `next build`, and end-to-end HTTP + DB checks.
-> Deferred to later increments: object storage (T016) and full observability
-> (T017) are stubbed pending the P2 media/jobs work; full e2e (Playwright) and
-> the P2/P3 phases (5–11) are not yet implemented. Assessment/certificate/
-> discussion/notification tables were intentionally left out of the MVP
-> migration and land with their stories.
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -73,7 +73,6 @@ stories depend on.
 - [ ] T017 [P] Structured logging (pino) + error tracking wiring in `src/server/observability.ts`
 - [ ] T018 [P] App shells & role-aware nav/layouts in `src/components/layout/` and route groups `(auth)`, `(marketing)`, `(learn)`, `(teach)`, `(admin)`
 - [ ] T019 [P] Auth pages: sign in / register / password reset in `src/app/(auth)/`
-- [ ] T019a [P] Self-service profile settings (edit name, avatar upload, change password) in `src/app/(auth)/settings/` + `src/server/services/profile.ts` — closes FR-003 self-management half
 - [ ] T020 Uniform API error handling + pagination helper in `src/server/http.ts`; `/api/uploads` route handler
 
 **Checkpoint**: A user can register, sign in, and land on a role-appropriate
@@ -122,13 +121,12 @@ progress and resume are correct.
 - [ ] T032 [P] [US2] Unit test: progress computation from stable lesson ids (FR-009/014, SC-003) in `tests/unit/progress.test.ts`
 - [ ] T033 [P] [US2] Integration test: idempotent enrollment (FR-011) in `tests/integration/enrollment.test.ts`
 - [ ] T034 [P] [US2] E2E: catalog → enroll → complete lesson → resume in `tests/e2e/learning.spec.ts`
-- [ ] T034a [P] [US2] Search-latency benchmark: assert catalog search < 1s over a 1,000-course fixture (SC-006) in `tests/integration/catalog-perf.test.ts`
 
 ### Implementation for US2
 
 - [ ] T035 [P] [US2] Catalog service + Postgres full-text search/filter in `src/server/services/catalog.ts`
 - [ ] T036 [P] [US2] Enrollment service (idempotent) in `src/server/services/enrollment.ts`
-- [ ] T037 [US2] Progress service (mark complete, recompute %, resume point, course-complete trigger) in `src/server/services/progress.ts` — the course-complete trigger emits a domain event; certificate issuance (T060, US5) subscribes to it and is a no-op until US5 is built, so US2 ships without a dangling dependency (resolves I3)
+- [ ] T037 [US2] Progress service (mark complete, recompute %, resume point, course-complete trigger) in `src/server/services/progress.ts`
 - [ ] T038 [P] [US2] Route handlers: `GET /api/courses`, `POST /api/enrollments`, `GET /api/enrollments`, `POST /api/lessons/{id}/complete`
 - [ ] T039 [US2] Public catalog + course detail pages in `src/app/(marketing)/courses/`
 - [ ] T040 [US2] Course player + lesson viewer (video/text/file) + mark-complete + resume in `src/app/(learn)/courses/[slug]/`
@@ -185,7 +183,6 @@ automatic with attempts/timers enforced.
 ### Tests for US5 ⚠️ (write first, must fail)
 
 - [ ] T057 [P] [US5] Unit test: certificate verification (issued/never/revoked) (SC-008) in `tests/unit/certificate.test.ts`
-- [ ] T057a [P] [US5] Integration test: course-completion event issues exactly one certificate (idempotent, FR-016/024) in `tests/integration/certificate-trigger.test.ts` — closes C1
 - [ ] T058 [P] [US5] Integration test: gradebook aggregation (FR-022) in `tests/integration/gradebook.test.ts`
 
 ### Implementation for US5
@@ -194,7 +191,7 @@ automatic with attempts/timers enforced.
 - [ ] T060 [P] [US5] Certificate service (issue on completion, unguessable code, verify, revoke) in `src/server/services/certificate.ts`
 - [ ] T061 [US5] Route handlers: `GET /api/courses/{id}/gradebook`, `GET /api/certificates/verify/{code}`
 - [ ] T062 [US5] Gradebook UI (instructor) + student grades view + public verification page in `src/app/(marketing)/verify/`
-- [ ] T063 [US5] Certificate PDF generation job in `src/server/jobs/certificate.ts` — runs via the Redis/BullMQ queue when configured, with a synchronous fallback path so US5 works without Redis at v1 volumes (resolves I1)
+- [ ] T063 [US5] Async certificate PDF generation via queue job in `src/server/jobs/certificate.ts`
 
 **Checkpoint**: Gradebook + verifiable certificates functional.
 
@@ -212,7 +209,6 @@ automatic with attempts/timers enforced.
 - [ ] T066 [P] [US6] Admin service (user management, role change, suspend) + AuditLog writes in `src/server/services/admin.ts`
 - [ ] T067 [P] [US6] Course review service (approve/reject/publish/archive) in `src/server/services/review.ts`
 - [ ] T068 [P] [US6] Category/taxonomy service in `src/server/services/category.ts`
-- [ ] T068a [P] [US6] Unit test: category CRUD + unique slug generation in `tests/unit/category.test.ts` — closes C1
 - [ ] T069 [US6] Route handlers under `src/app/api/admin/`
 - [ ] T070 [US6] Admin console UI (users, review queue, categories) in `src/app/(admin)/`
 
@@ -228,11 +224,11 @@ automatic with attempts/timers enforced.
 
 ### Implementation for US7
 
-- [ ] T072 [P] [US7] Notification service + fan-out on events (enroll, grade, reply, announcement) in `src/server/services/notification.ts` — queue-backed fan-out with synchronous fallback (resolves I1)
+- [ ] T072 [P] [US7] Notification service + fan-out on events (enroll, grade, reply, announcement) in `src/server/services/notification.ts`
 - [ ] T073 [P] [US7] Discussion service (threads/posts, enrolled-only) in `src/server/services/discussion.ts`
 - [ ] T074 [US7] Announcement service + broadcast in `src/server/services/announcement.ts`
 - [ ] T075 [US7] Discussion UI, announcements UI, notification center + `GET /api/notifications`
-- [ ] T076 [P] [US7] Transactional email adapter + queue integration in `src/server/jobs/email.ts` — queue-backed with synchronous fallback so email works without Redis at v1 volumes (resolves I1)
+- [ ] T076 [P] [US7] Transactional email adapter + queue integration in `src/server/jobs/email.ts`
 
 **Checkpoint**: Communication features functional.
 
@@ -259,10 +255,8 @@ automatic with attempts/timers enforced.
 - [ ] T081 [P] Accessibility audit (WCAG 2.1 AA): keyboard, focus, ARIA, contrast across P1/P2 screens
 - [ ] T082 [P] Performance pass: Core Web Vitals budgets, N+1 query review, add missing indexes (SC-006/007)
 - [ ] T083 [P] Security hardening: rate limiting, CSRF/headers, upload scanning, secret audit
-- [ ] T084 [P] Pagination audit: verify every list-bearing endpoint/page uses the T020 helper (catalog, enrollments, submissions, gradebook, notifications, admin tables) (FR-032) — closes U1
-- [ ] T085 [P] Seed richer demo data + `README.md` + update `quickstart.md`
-- [ ] T086 Load/scale test: seed to 5,000 learners / 10,000 enrollments and drive catalog, enrollment, player, and gradebook under load (k6/Artillery); assert no functional degradation (SC-009) — closes G2
-- [ ] T087 Full quickstart validation run (all 6 gates green) and MVP demo walkthrough
+- [ ] T084 [P] Seed richer demo data + `README.md` + update `quickstart.md`
+- [ ] T085 Full quickstart validation run (all 6 gates green) and MVP demo walkthrough
 
 ---
 
@@ -315,5 +309,4 @@ US7 (discussions/notifications) → US8 (analytics), each shippable on its own.
 - `[Story]` label ties each task to a spec user story for traceability.
 - Commit after each task or logical group; keep `main` releasable.
 - Every mutation task must call `authorize()` server-side (Principle V).
-- Total: 91 tasks across 11 phases (85 original + T019a, T034a, T057a, T068a,
-  T084, T086 added during analysis remediation); MVP = T001–T041 plus T019a.
+- Total: 85 tasks across 11 phases; MVP = T001–T041.

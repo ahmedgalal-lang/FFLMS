@@ -1,19 +1,13 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/server/auth";
-import { SiteHeader } from "@/components/site-header";
+import { getPrincipal } from "@/server/auth";
+import { AppShell } from "@/components/layout/app-shell";
 
 export default async function LearnLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
-  if (!session?.user) redirect("/sign-in");
-
-  return (
-    <div className="min-h-screen bg-ground">
-      <SiteHeader />
-      {children}
-    </div>
-  );
+  const principal = await getPrincipal();
+  if (!principal) redirect("/sign-in");
+  return <AppShell>{children}</AppShell>;
 }
