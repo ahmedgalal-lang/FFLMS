@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 import type { Role, UserStatus } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { changeRoleAction, setStatusAction } from "@/app/(admin)/admin/actions";
+import {
+  changeRoleAction,
+  setStatusAction,
+  updateUserInfoAction,
+  setUserPasswordAction,
+} from "@/app/(admin)/admin/actions";
 
 type AdminUser = {
   id: string;
@@ -31,13 +36,48 @@ export function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) 
   }
 
   const suspended = user.status === "SUSPENDED";
+  const [editingName, setEditingName] = useState(false);
+  const [name, setName] = useState(user.name);
+  const [resetting, setResetting] = useState(false);
+  const [newPass, setNewPass] = useState("");
 
   return (
     <tr className="border-b last:border-0 align-top">
       <td className="p-3">
-        <div className="font-medium">
-          {user.name} {isSelf && <span className="text-xs text-muted-foreground">(you)</span>}
-        </div>
+        {editingName ? (
+          <div className="flex items-center gap-1">
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              aria-label={`Edit name for ${user.email}`}
+              className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+            />
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={pending}
+              onClick={() =>
+                run(async () => {
+                  const r = await updateUserInfoAction(user.id, { name });
+                  if (!r?.error) setEditingName(false);
+                  return r;
+                })
+              }
+            >
+              Save
+            </Button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="text-left font-medium hover:underline"
+            onClick={() => setEditingName(true)}
+            title="Click to edit name"
+          >
+            {user.name}
+          </button>
+        )}
+        {isSelf && <span className="ml-1 text-xs text-muted-foreground">(you)</span>}
         <div className="text-xs text-muted-foreground">{user.email}</div>
         {error && <div className="mt-1 text-xs text-destructive">{error}</div>}
       </td>
@@ -63,16 +103,54 @@ export function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) 
         {user._count.coursesAuthored} authored · {user._count.enrollments} enrolled
       </td>
       <td className="p-3">
-        <Button
-          variant={suspended ? "outline" : "destructive"}
-          size="sm"
-          disabled={pending || isSelf}
-          onClick={() =>
-            run(() => setStatusAction(user.id, suspended ? "ACTIVE" : "SUSPENDED"))
-          }
-        >
-          {suspended ? "Reactivate" : "Suspend"}
-        </Button>
+        <div className="flex flex-wrap items-center gap-1">
+          <Button
+            variant={suspended ? "outline" : "destructive"}
+            size="sm"
+            disabled={pending || isSelf}
+            onClick={() =>
+              run(() => setStatusAction(user.id, suspended ? "ACTIVE" : "SUSPENDED"))
+            }
+          >
+            {suspended ? "Reactivate" : "Suspend"}
+          </Button>
+          {resetting ? (
+            <div className="flex items-center gap-1">
+              <input
+                type="text"
+                value={newPass}
+                onChange={(e) => setNewPass(e.target.value)}
+                placeholder="New password"
+                aria-label={`New password for ${user.email}`}
+                className="h-8 w-32 rounded-md border border-input bg-background px-2 text-sm"
+              />
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={pending || newPass.length < 8}
+                onClick={() =>
+                  run(async () => {
+                    const r = await setUserPasswordAction(user.id, { newPassword: newPass });
+                    if (!r?.error) {
+                      setResetting(false);
+                      setNewPass("");
+                    }
+                    return r;
+                  })
+                }
+              >
+                Set
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setResetting(false)}>
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={() => setResetting(true)}>
+              Reset password
+            </Button>
+          )}
+        </div>
       </td>
     </tr>
   );

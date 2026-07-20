@@ -3,7 +3,13 @@
 import { revalidatePath } from "next/cache";
 import type { Role, UserStatus } from "@prisma/client";
 import { requirePrincipal } from "@/server/auth";
-import { changeUserRole, setUserStatus } from "@/server/services/admin";
+import {
+  changeUserRole,
+  setUserStatus,
+  createUser,
+  updateUserInfo,
+  setUserPassword,
+} from "@/server/services/admin";
 import { approveCourse, rejectCourse, archiveCourse } from "@/server/services/review";
 import {
   createCategory,
@@ -15,6 +21,9 @@ import {
   setStatusSchema,
   rejectCourseSchema,
   categorySchema,
+  adminCreateUserSchema,
+  adminUpdateUserSchema,
+  adminSetPasswordSchema,
 } from "@/lib/validation";
 import { AppError } from "@/server/http";
 import { AuthorizationError } from "@/server/access/policy";
@@ -50,6 +59,50 @@ export async function setStatusAction(
   try {
     await setUserStatus(principal, userId, parsed.data.status);
     revalidatePath("/admin/users");
+    return { ok: true };
+  } catch (err) {
+    return toState(err);
+  }
+}
+
+export async function createUserAction(input: unknown): Promise<AdminState> {
+  const principal = await requirePrincipal();
+  const parsed = adminCreateUserSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid user." };
+  try {
+    await createUser(principal, parsed.data);
+    revalidatePath("/admin/users");
+    return { ok: true };
+  } catch (err) {
+    return toState(err);
+  }
+}
+
+export async function updateUserInfoAction(
+  userId: string,
+  input: unknown,
+): Promise<AdminState> {
+  const principal = await requirePrincipal();
+  const parsed = adminUpdateUserSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid name." };
+  try {
+    await updateUserInfo(principal, userId, parsed.data);
+    revalidatePath("/admin/users");
+    return { ok: true };
+  } catch (err) {
+    return toState(err);
+  }
+}
+
+export async function setUserPasswordAction(
+  userId: string,
+  input: unknown,
+): Promise<AdminState> {
+  const principal = await requirePrincipal();
+  const parsed = adminSetPasswordSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid password." };
+  try {
+    await setUserPassword(principal, userId, parsed.data.newPassword);
     return { ok: true };
   } catch (err) {
     return toState(err);

@@ -5,6 +5,7 @@ import { parsePagination } from "@/server/http";
 import { adminUsersQuerySchema } from "@/lib/validation";
 import { AdminNav } from "@/components/admin/admin-nav";
 import { UserRow } from "@/components/admin/user-row";
+import { AddUserDialog } from "@/components/admin/add-user-dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -29,9 +30,12 @@ export default async function AdminUsersPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Users</h1>
-        <p className="text-sm text-muted-foreground">{total} total</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Users</h1>
+          <p className="text-sm text-muted-foreground">{total} total</p>
+        </div>
+        <AddUserDialog />
       </div>
       <AdminNav />
 

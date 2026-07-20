@@ -1,7 +1,8 @@
 import type { Prisma, Role, UserStatus } from "@prisma/client";
 import { db } from "@/server/db";
 import { authorize, type Principal } from "@/server/access/policy";
-import { NotFoundError, AppError, type PageParams } from "@/server/http";
+import { NotFoundError, AppError, ConflictError, type PageParams } from "@/server/http";
+import { hashPassword } from "@/server/auth/password";
 
 /**
  * Admin user management (FR-003) with an audit trail for sensitive actions
@@ -114,6 +115,65 @@ export async function setUserStatus(
     { from: user.status, to: status },
   );
   return updated;
+}
+
+/** Admin creates a new user with an initial password (FR-003). */
+export async function createUser(
+  principal: Principal,
+  input: { name: string; email: string; role: Role; password: string },
+) {
+  authorize(principal, { type: "admin:users" });
+  const email = input.email.toLowerCase();
+  const existing = await db.user.findUnique({ where: { email } });
+  if (existing) throw new ConflictError("A user with that email already exists.");
+
+  const user = await db.user.create({
+    data: {
+      name: input.name,
+      email,
+      role: input.role,
+      passwordHash: await hashPassword(input.password),
+      emailVerifiedAt: new Date(),
+    },
+    select: { id: true, name: true, email: true, role: true, status: true },
+  });
+  await writeAudit(principal.id, "USER_CREATED", "User", user.id, {
+    role: input.role,
+  });
+  return user;
+}
+
+/** Admin edits a user's basic info (name). */
+export async function updateUserInfo(
+  principal: Principal,
+  userId: string,
+  input: { name: string },
+) {
+  authorize(principal, { type: "admin:users" });
+  const user = await db.user.findUnique({ where: { id: userId }, select: { id: true } });
+  if (!user) throw new NotFoundError("User not found.");
+  return db.user.update({
+    where: { id: userId },
+    data: { name: input.name },
+    select: { id: true, name: true, email: true, role: true, status: true },
+  });
+}
+
+/** Admin resets a user's password (no current-password check). */
+export async function setUserPassword(
+  principal: Principal,
+  userId: string,
+  newPassword: string,
+) {
+  authorize(principal, { type: "admin:users" });
+  const user = await db.user.findUnique({ where: { id: userId }, select: { id: true } });
+  if (!user) throw new NotFoundError("User not found.");
+  await db.user.update({
+    where: { id: userId },
+    data: { passwordHash: await hashPassword(newPassword) },
+  });
+  await writeAudit(principal.id, "PASSWORD_RESET", "User", userId);
+  return { ok: true };
 }
 
 /** Organization-wide totals for the admin dashboard (FR-026). */

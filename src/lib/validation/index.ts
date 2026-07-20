@@ -189,6 +189,39 @@ export const gradeSubmissionSchema = z.object({
 });
 export type GradeSubmissionInput = z.infer<typeof gradeSubmissionSchema>;
 
+// ---------- Profile (self-service) ----------
+
+export const profileUpdateSchema = z.object({
+  name: z.string().min(2, "Name is too short").max(100),
+  bio: z.string().max(1000).optional().nullable(),
+  avatarUrl: z.string().url().optional().nullable(),
+});
+export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Enter your current password"),
+  newPassword: z.string().min(8, "Use at least 8 characters").max(200),
+});
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
+// ---------- Admin: user CRUD ----------
+
+export const adminCreateUserSchema = z.object({
+  name: z.string().min(2).max(100),
+  email: z.string().email(),
+  role: z.enum(["ADMIN", "INSTRUCTOR", "STUDENT"]).default("STUDENT"),
+  password: z.string().min(8, "Use at least 8 characters").max(200),
+});
+export type AdminCreateUserInput = z.infer<typeof adminCreateUserSchema>;
+
+export const adminUpdateUserSchema = z.object({
+  name: z.string().min(2).max(100),
+});
+
+export const adminSetPasswordSchema = z.object({
+  newPassword: z.string().min(8, "Use at least 8 characters").max(200),
+});
+
 // ---------- Admin ----------
 
 export const changeRoleSchema = z.object({

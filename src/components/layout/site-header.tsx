@@ -55,7 +55,12 @@ export async function SiteHeader() {
         </div>
 
         {user ? (
-          <UserMenu name={user.name} email={user.email} role={user.role} />
+          <UserMenu
+            name={user.name}
+            email={user.email}
+            role={user.role}
+            avatarUrl={user.avatarUrl}
+          />
         ) : (
           <div className="flex items-center gap-2">
             <Button asChild variant="ghost" size="sm">
