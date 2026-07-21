@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRef } from "react";
 import type { Role } from "@prisma/client";
 import { User, LogOut, LayoutDashboard } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -43,9 +44,17 @@ export function UserMenu({
     .join("")
     .toUpperCase();
 
+  const signOutForm = useRef<HTMLFormElement>(null);
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger className="flex items-center gap-2 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring">
+    <>
+      {/* Lives outside the menu so it is not unmounted when the dropdown closes. */}
+      <form ref={signOutForm} action="/sign-out" method="post" className="hidden" />
+      <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label="Account menu"
+        className="flex items-center gap-2 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
         <Avatar>
           {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
           <AvatarFallback>{initials}</AvatarFallback>
@@ -70,14 +79,16 @@ export function UserMenu({
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <form action="/sign-out" method="post" className="w-full">
-            <button type="submit" className="flex w-full items-center gap-2">
-              <LogOut className="h-4 w-4" /> Sign out
-            </button>
-          </form>
+        <DropdownMenuItem
+          onSelect={(e) => {
+            e.preventDefault();
+            signOutForm.current?.requestSubmit();
+          }}
+        >
+          <LogOut className="h-4 w-4" /> Sign out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+    </>
   );
 }

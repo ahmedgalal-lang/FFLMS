@@ -9,10 +9,11 @@ export async function signIn(page: Page, email: string, password = "password123"
   await page.waitForURL(/\/(studio|my-learning|admin)/);
 }
 
-/** Sign out via the header button (POST form) and wait for the landing page. */
+/** Open the account dropdown and sign out, then wait for the landing page. */
 export async function signOut(page: Page) {
-  await page.getByRole("button", { name: "Sign out" }).click();
-  await page.waitForURL(/\/$/);
+  await page.getByRole("button", { name: "Account menu" }).click();
+  await page.getByRole("menuitem", { name: "Sign out" }).click();
+  await page.waitForURL(/\/(sign-in)?$/);
 }
 
 export const SEED = {
