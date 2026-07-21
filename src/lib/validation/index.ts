@@ -281,11 +281,3 @@ export const announcementCreateSchema = z.object({
 });
 export type AnnouncementCreateInput = z.infer<typeof announcementCreateSchema>;
 
-// ---------- Uploads ----------
-
-export const presignSchema = z.object({
-  fileName: z.string().min(1).max(255),
-  contentType: z.string().min(1).max(160),
-  sizeBytes: z.number().int().min(1),
-  prefix: z.string().max(80).optional(),
-});

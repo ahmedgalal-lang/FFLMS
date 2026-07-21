@@ -5,6 +5,8 @@ import { z } from "zod";
 import { db } from "@/server/db";
 import { env, isOAuthEnabled } from "@/config/env";
 import { verifyPassword } from "@/server/auth/password";
+import { rateLimit } from "@/server/security/rate-limit";
+import { logger } from "@/server/observability";
 import type { Role, UserStatus } from "@prisma/client";
 
 const credentialsSchema = z.object({
@@ -19,6 +21,13 @@ const providers: NextAuthConfig["providers"] = [
       const parsed = credentialsSchema.safeParse(raw);
       if (!parsed.success) return null;
       const { email, password } = parsed.data;
+
+      // Throttle sign-in attempts per email (best-effort brute-force defense).
+      const rl = rateLimit(`signin:${email.toLowerCase()}`, 10, 300);
+      if (!rl.allowed) {
+        logger.warn({ email: email.toLowerCase() }, "sign-in rate limited");
+        return null;
+      }
 
       const user = await db.user.findUnique({
         where: { email: email.toLowerCase() },

@@ -108,8 +108,25 @@ model User {
   auditLogs       AuditLog[]
   accounts        Account[]
   sessions        Session[]
+  fileAssets      FileAsset[]
 
   @@index([role])
+}
+
+/// Uploaded files stored in the database (avatars use inline data URLs; lesson
+/// attachments and assignment files use this table, served via /api/files/{id}).
+model FileAsset {
+  id           String   @id @default(cuid())
+  fileName     String
+  contentType  String
+  size         Int
+  data         Bytes
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  uploadedBy User @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@index([uploadedById])
 }
 
 model Category {

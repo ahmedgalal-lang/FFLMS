@@ -6,6 +6,7 @@ import {
   contentBlockSchema,
   type ContentBlockInput,
 } from "@/lib/validation";
+import { sanitizeRichText } from "@/server/security/sanitize";
 
 /** Resolve the course that owns a module, and authorize a curriculum edit. */
 async function authorizeModule(principal: Principal, moduleId: string) {
@@ -167,7 +168,8 @@ export async function addContentBlock(
       lessonId,
       type: data.type,
       order: count,
-      text: data.text ?? null,
+      // Sanitize authored HTML before storing (rendered via innerHTML later).
+      text: data.text != null ? sanitizeRichText(data.text) : null,
       mediaUrl: data.mediaUrl ?? null,
       fileName: data.fileName ?? null,
       fileSize: data.fileSize ?? null,

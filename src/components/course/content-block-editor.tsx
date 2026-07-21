@@ -47,7 +47,7 @@ export function ContentBlockEditor({
     setError(null);
     startTransition(async () => {
       try {
-        const { url, name, size } = await uploadFile(file, "lessons");
+        const { url, name, size } = await uploadFile(file);
         const result = await addContentBlockAction(courseId, lessonId, {
           type: "FILE",
           mediaUrl: url,

@@ -48,7 +48,7 @@ export function AssignmentPanel({
     setError(null);
     setUploading(true);
     try {
-      const { url, name } = await uploadFile(file, "submissions");
+      const { url, name } = await uploadFile(file);
       setFileUrl(url);
       setFileName(name);
     } catch (e) {
