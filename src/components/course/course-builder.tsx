@@ -13,6 +13,7 @@ import {
   HelpCircle,
   ClipboardList,
   BarChart3,
+  LineChart,
   MessageSquare,
   Loader2,
 } from "lucide-react";
@@ -91,6 +92,11 @@ export function CourseBuilder({
           <Button asChild variant="outline" size="sm">
             <Link href={`/studio/${course.id}/gradebook`}>
               <BarChart3 /> Gradebook
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/studio/${course.id}/analytics`}>
+              <LineChart /> Analytics
             </Link>
           </Button>
           <Button asChild variant="outline" size="sm">

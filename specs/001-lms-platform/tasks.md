@@ -17,8 +17,12 @@ description: "Task list for LMS Platform implementation"
 > category management — all writing an AuditLog; instructor submit-for-review),
 > and **US7 discussions & notifications** (per-course Q&A threads + replies with
 > reply notifications, instructor announcements broadcast to enrolled students, a
-> notification center with unread badge). 83 unit/integration tests + 4 e2e
-> journeys pass; typecheck, lint, and build are green. (Deferred: async
+> notification center with unread badge), and **US8 analytics** (instructor
+> per-course analytics — enrollments, completion rate, average quiz/assignment
+> scores, per-lesson drop-off — and an admin org-wide reports view with top
+> courses). All 8 user stories are now implemented (T001–T080). 87
+> unit/integration tests + 4 e2e journeys pass; typecheck, lint, and build are
+> green. Remaining: Phase 11 polish (a11y/perf/security). (Deferred: async
 > certificate PDF generation, T063, and transactional email delivery, T076 —
 > notifications are in-app; certificates verify by code without a PDF.)
 >
