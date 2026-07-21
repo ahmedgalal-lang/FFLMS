@@ -47,6 +47,16 @@ export default async function CourseDetailPage({
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
       <div className="space-y-6">
+        {course.coverImageUrl && (
+          <div className="aspect-video w-full overflow-hidden rounded-lg border bg-muted">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={course.coverImageUrl}
+              alt=""
+              className="h-full w-full object-cover"
+            />
+          </div>
+        )}
         <div>
           {course.category && (
             <Badge variant="secondary">{course.category.name}</Badge>

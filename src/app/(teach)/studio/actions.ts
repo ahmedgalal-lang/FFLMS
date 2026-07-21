@@ -67,6 +67,7 @@ export async function updateCourseAction(
     description?: string;
     categoryId?: string | null;
     completionThreshold?: number;
+    coverImageUrl?: string | null;
   },
 ): Promise<ActionState> {
   const principal = await requirePrincipal();

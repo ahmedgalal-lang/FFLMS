@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Settings, Loader2, Trash2 } from "lucide-react";
+import { Settings, Loader2, Trash2, ImagePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +19,7 @@ import {
   updateCourseAction,
   deleteCourseAction,
 } from "@/app/(teach)/studio/actions";
+import { uploadFile } from "@/lib/upload-client";
 
 type Category = { id: string; name: string };
 
@@ -33,20 +34,45 @@ export function CourseSettingsDialog({
     description: string;
     categoryId: string | null;
     completionThreshold: number;
+    coverImageUrl: string | null;
   };
   categories: Category[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const coverRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState(course.title);
   const [summary, setSummary] = useState(course.summary);
   const [description, setDescription] = useState(course.description);
   const [categoryId, setCategoryId] = useState(course.categoryId ?? "");
   const [threshold, setThreshold] = useState(String(course.completionThreshold));
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(
+    course.coverImageUrl,
+  );
+
+  async function handleCover() {
+    const file = coverRef.current?.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Please choose an image file.");
+      return;
+    }
+    setError(null);
+    setUploading(true);
+    try {
+      const { url } = await uploadFile(file);
+      setCoverImageUrl(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed.");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   function save() {
     setError(null);
@@ -57,6 +83,7 @@ export function CourseSettingsDialog({
         description: description.trim(),
         categoryId: categoryId || null,
         completionThreshold: Number(threshold),
+        coverImageUrl,
       });
       if (res?.error) {
         setError(res.error);
@@ -92,7 +119,7 @@ export function CourseSettingsDialog({
           <Settings /> Settings
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Course settings</DialogTitle>
           <DialogDescription>
@@ -101,6 +128,63 @@ export function CourseSettingsDialog({
         </DialogHeader>
 
         <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Cover photo</Label>
+            <div className="flex aspect-video w-full items-center justify-center overflow-hidden rounded-md border bg-gradient-to-br from-primary/10 to-primary/5">
+              {coverImageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={coverImageUrl}
+                  alt="Course cover preview"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span className="text-sm text-muted-foreground">
+                  No cover photo yet
+                </span>
+              )}
+            </div>
+            <input
+              ref={coverRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              aria-label="Course cover image"
+              onChange={handleCover}
+            />
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={uploading || pending}
+                onClick={() => coverRef.current?.click()}
+              >
+                {uploading ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  <ImagePlus />
+                )}
+                {coverImageUrl ? "Replace photo" : "Upload photo"}
+              </Button>
+              {coverImageUrl && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={uploading || pending}
+                  onClick={() => setCoverImageUrl(null)}
+                >
+                  Remove
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Shown on the catalog card and course page. Landscape (16:9) works
+              best. Click Save changes to apply.
+            </p>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="cs-title">Title</Label>
             <Input

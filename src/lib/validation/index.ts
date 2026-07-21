@@ -36,12 +36,25 @@ export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 
 // ---------- Course ----------
 
+// A course cover: an app-served file path (/api/files/…), an external http(s)
+// URL, or an inline data: image. Capped as a safety ceiling.
+const courseImageValue = z
+  .string()
+  .max(2_000_000, "Image is too large")
+  .refine(
+    (v) =>
+      v.startsWith("/api/files/") ||
+      v.startsWith("data:image/") ||
+      /^https?:\/\//.test(v),
+    "Must be an image",
+  );
+
 export const courseCreateSchema = z.object({
   title: z.string().min(3, "Title is too short").max(160),
   summary: z.string().min(10, "Add a short summary").max(280),
   description: z.string().max(20_000).optional().default(""),
   categoryId: z.string().cuid().optional().nullable(),
-  coverImageUrl: z.string().url().optional().nullable(),
+  coverImageUrl: courseImageValue.optional().nullable(),
 });
 export type CourseCreateInput = z.infer<typeof courseCreateSchema>;
 

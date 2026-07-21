@@ -102,6 +102,7 @@ export function CourseBuilder({
               description: course.description,
               categoryId: course.categoryId,
               completionThreshold: course.completionThreshold,
+              coverImageUrl: course.coverImageUrl,
             }}
             categories={categories}
           />
