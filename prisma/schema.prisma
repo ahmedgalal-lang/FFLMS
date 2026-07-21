@@ -167,6 +167,7 @@ model Course {
 
   @@index([status, categoryId])
   @@index([instructorId])
+  @@index([status, publishedAt])
 }
 
 model Module {
@@ -242,6 +243,7 @@ model Enrollment {
   @@unique([studentId, courseId])
   @@index([courseId])
   @@index([studentId])
+  @@index([studentId, status])
 }
 
 model LessonProgress {
@@ -331,6 +333,7 @@ model QuizAttempt {
 
   @@unique([quizId, studentId, attemptNumber])
   @@index([enrollmentId])
+  @@index([studentId])
 }
 
 model AttemptAnswer {
@@ -389,6 +392,7 @@ model Submission {
 
   @@unique([assignmentId, studentId])
   @@index([assignmentId])
+  @@index([studentId])
 }
 
 model Certificate {

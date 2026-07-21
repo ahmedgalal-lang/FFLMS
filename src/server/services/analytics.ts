@@ -124,18 +124,16 @@ export async function getOrgReports(principal: Principal) {
     }),
   ]);
 
-  const topCourses = await Promise.all(
-    topCoursesRaw.map(async (g) => {
-      const course = await db.course.findUnique({
-        where: { id: g.courseId },
-        select: { title: true },
-      });
-      return {
-        title: course?.title ?? "(deleted)",
-        enrollments: g._count.courseId,
-      };
-    }),
-  );
+  // Batch the course lookups into one query (avoid N+1).
+  const topCourseTitles = await db.course.findMany({
+    where: { id: { in: topCoursesRaw.map((g) => g.courseId) } },
+    select: { id: true, title: true },
+  });
+  const titleById = new Map(topCourseTitles.map((c) => [c.id, c.title]));
+  const topCourses = topCoursesRaw.map((g) => ({
+    title: titleById.get(g.courseId) ?? "(deleted)",
+    enrollments: g._count.courseId,
+  }));
 
   return {
     totalUsers,
