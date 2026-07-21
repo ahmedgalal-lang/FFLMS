@@ -17,6 +17,8 @@ import {
   deleteLesson,
   addContentBlock,
   deleteContentBlock,
+  addVideoQuestion,
+  deleteVideoQuestion,
 } from "@/server/services/curriculum";
 import { publishCourse, unpublishCourse } from "@/server/services/publish";
 import { submitForReview } from "@/server/services/review";
@@ -149,11 +151,40 @@ export async function addLessonAction(
 export async function updateLessonAction(
   courseId: string,
   lessonId: string,
-  data: { title?: string; isRequired?: boolean },
+  data: { title?: string; isRequired?: boolean; minWatchPercent?: number },
 ) {
   const principal = await requirePrincipal();
   try {
     await updateLesson(principal, lessonId, data);
+    revalidatePath(`/studio/${courseId}`);
+    return { ok: true };
+  } catch (err) {
+    return toState(err);
+  }
+}
+
+export async function addVideoQuestionAction(
+  courseId: string,
+  lessonId: string,
+  data: { atSec: number; prompt: string; options: string[]; correct: number },
+): Promise<ActionState> {
+  const principal = await requirePrincipal();
+  try {
+    await addVideoQuestion(principal, lessonId, data);
+    revalidatePath(`/studio/${courseId}`);
+    return { ok: true };
+  } catch (err) {
+    return toState(err);
+  }
+}
+
+export async function deleteVideoQuestionAction(
+  courseId: string,
+  questionId: string,
+): Promise<ActionState> {
+  const principal = await requirePrincipal();
+  try {
+    await deleteVideoQuestion(principal, questionId);
     revalidatePath(`/studio/${courseId}`);
     return { ok: true };
   } catch (err) {

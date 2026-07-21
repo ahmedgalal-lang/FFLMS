@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { normalizeVideoUrl, isEmbedVideo } from "@/lib/video";
+import {
+  normalizeVideoUrl,
+  isEmbedVideo,
+  videoProvider,
+  youTubeId,
+  vimeoId,
+} from "@/lib/video";
 
 describe("normalizeVideoUrl", () => {
   it("converts a YouTube watch URL to an embed URL", () => {
@@ -73,5 +79,36 @@ describe("isEmbedVideo", () => {
 
   it("returns false for malformed URLs", () => {
     expect(isEmbedVideo("nonsense")).toBe(false);
+  });
+});
+
+describe("videoProvider", () => {
+  it("classifies providers", () => {
+    expect(videoProvider("https://www.youtube.com/embed/x")).toBe("youtube");
+    expect(videoProvider("https://player.vimeo.com/video/1")).toBe("vimeo");
+    expect(videoProvider("https://drive.google.com/file/d/x/preview")).toBe(
+      "embed",
+    );
+    expect(
+      videoProvider("https://xyz.supabase.co/storage/v1/object/public/m/a.mp4"),
+    ).toBe("file");
+  });
+});
+
+describe("id extraction", () => {
+  it("pulls YouTube ids from several URL forms", () => {
+    expect(youTubeId("https://www.youtube.com/embed/gSSsZReIFRk")).toBe(
+      "gSSsZReIFRk",
+    );
+    expect(youTubeId("https://youtu.be/gSSsZReIFRk")).toBe("gSSsZReIFRk");
+    expect(youTubeId("https://www.youtube.com/watch?v=gSSsZReIFRk")).toBe(
+      "gSSsZReIFRk",
+    );
+  });
+
+  it("pulls Vimeo ids", () => {
+    expect(vimeoId("https://player.vimeo.com/video/76979871")).toBe("76979871");
+    expect(vimeoId("https://vimeo.com/76979871")).toBe("76979871");
+    expect(vimeoId("https://vimeo.com/not-a-number")).toBeNull();
   });
 });

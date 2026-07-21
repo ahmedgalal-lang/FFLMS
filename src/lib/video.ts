@@ -63,6 +63,53 @@ export function normalizeVideoUrl(input: string): string {
 }
 
 /**
+ * A video's playback provider. "file" = a direct media file we play in a
+ * native <video> (full control). "youtube"/"vimeo" = controllable via their
+ * player SDKs. "embed" = an uncontrolled third-party iframe (e.g. Google Drive)
+ * — plays, but we cannot read time, gate, or inject in-video questions.
+ */
+export type VideoProvider = "file" | "youtube" | "vimeo" | "embed";
+
+export function videoProvider(url: string): VideoProvider {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    if (YT_HOSTS.includes(host) || host.endsWith("youtube-nocookie.com"))
+      return "youtube";
+    if (VIMEO_HOSTS.includes(host)) return "vimeo";
+    if (DRIVE_HOSTS.includes(host)) return "embed";
+    return "file";
+  } catch {
+    return "file";
+  }
+}
+
+/** Extract the YouTube video id from any normalized/embed/watch/short URL. */
+export function youTubeId(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.hostname === "youtu.be") return u.pathname.slice(1).split("/")[0] || null;
+    if (u.pathname.startsWith("/embed/")) return u.pathname.split("/")[2] || null;
+    if (u.pathname === "/watch") return u.searchParams.get("v");
+    if (u.pathname.startsWith("/shorts/")) return u.pathname.split("/")[2] || null;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Extract the numeric Vimeo id from a vimeo.com or player.vimeo.com URL. */
+export function vimeoId(url: string): string | null {
+  try {
+    const u = new URL(url);
+    const seg = u.pathname.split("/").filter(Boolean);
+    const id = u.pathname.includes("/video/") ? seg[seg.indexOf("video") + 1] : seg[0];
+    return id && /^\d+$/.test(id) ? id : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * True when the URL is an embeddable third-party player page (rendered in an
  * `<iframe>`); false for a direct media file (rendered in a `<video>` element).
  */

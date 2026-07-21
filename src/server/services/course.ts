@@ -111,6 +111,7 @@ export async function getCourseForEditing(
             orderBy: { order: "asc" },
             include: {
               contentBlocks: { orderBy: { order: "asc" } },
+              videoQuestions: { orderBy: { atSec: "asc" } },
               quiz: { select: { id: true } },
               assignment: { select: { id: true } },
             },

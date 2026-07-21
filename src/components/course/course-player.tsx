@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -13,13 +13,14 @@ import {
   Loader2,
 } from "lucide-react";
 import type { ContentBlock } from "@prisma/client";
-import { isEmbedVideo } from "@/lib/video";
+import { isEmbedVideo, videoProvider } from "@/lib/video";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { completeLessonAction } from "@/app/(learn)/learn/[slug]/actions";
 import { QuizTaker } from "@/components/quiz/quiz-taker";
 import { AssignmentPanel } from "@/components/assignment/assignment-panel";
+import { VideoLesson, type CueQuestion } from "@/components/course/video-lesson";
 
 type PlayerLesson = {
   id: string;
@@ -45,7 +46,9 @@ type LessonAssignment = {
 };
 type CurrentLesson =
   | (PlayerLesson & {
+      minWatchPercent: number;
       contentBlocks: ContentBlock[];
+      videoQuestions: CueQuestion[];
       quiz: { id: string; title: string } | null;
       assignment: LessonAssignment | null;
     })
@@ -65,6 +68,7 @@ export function CoursePlayer({
   course,
   completedIds,
   currentLesson,
+  videoProgress,
   mySubmission,
   progressPercent,
 }: {
@@ -72,6 +76,7 @@ export function CoursePlayer({
   course: PlayerCourse;
   completedIds: string[];
   currentLesson: CurrentLesson;
+  videoProgress: { positionSec: number; watchedSec: number };
   mySubmission: MySubmission;
   progressPercent: number;
 }) {
@@ -82,6 +87,21 @@ export function CoursePlayer({
   );
   const [progress, setProgress] = useState(progressPercent);
   const [error, setError] = useState<string | null>(null);
+  const [watchedPct, setWatchedPct] = useState(0);
+
+  // The first controllable (native file) video block gates advancement.
+  const gateVideoBlock = currentLesson?.contentBlocks.find(
+    (b) => b.type === "VIDEO" && videoProvider(b.mediaUrl ?? "") === "file",
+  );
+  const minWatch = currentLesson?.minWatchPercent ?? 0;
+  const gateActive = minWatch > 0 && !!gateVideoBlock;
+
+  // Reset the watched meter whenever the lesson changes, seeding from saved
+  // progress (we don't yet know duration, so start at 0 and let the player
+  // report the true % once metadata loads).
+  useEffect(() => {
+    setWatchedPct(0);
+  }, [currentLesson?.id]);
 
   const allLessons = course.modules.flatMap((m) => m.lessons);
   const currentIndex = currentLesson
@@ -204,9 +224,34 @@ export function CoursePlayer({
             </div>
 
             <div className="space-y-6">
-              {currentLesson.contentBlocks.map((block) => (
-                <LessonBlock key={block.id} block={block} />
-              ))}
+              {currentLesson.contentBlocks.map((block) => {
+                // The gating video uses the interactive player (resume,
+                // watch-tracking, in-video questions).
+                if (block.id === gateVideoBlock?.id) {
+                  return (
+                    <VideoLesson
+                      key={block.id}
+                      lessonId={currentLesson.id}
+                      src={block.mediaUrl ?? ""}
+                      provider="file"
+                      initialPositionSec={videoProgress.positionSec}
+                      initialWatchedSec={videoProgress.watchedSec}
+                      questions={currentLesson.videoQuestions}
+                      onWatched={(watchedSec, durationSec) =>
+                        setWatchedPct(
+                          durationSec > 0
+                            ? Math.min(
+                                100,
+                                Math.round((watchedSec / durationSec) * 100),
+                              )
+                            : 0,
+                        )
+                      }
+                    />
+                  );
+                }
+                return <LessonBlock key={block.id} block={block} />;
+              })}
               {currentLesson.contentBlocks.length === 0 && (
                 <p className="text-muted-foreground">
                   No content in this lesson yet.
@@ -236,8 +281,21 @@ export function CoursePlayer({
               </p>
             )}
 
+            {gateActive && !isCurrentComplete && watchedPct < minWatch && (
+              <p className="text-sm text-muted-foreground">
+                Watch at least {minWatch}% of the video to continue ({watchedPct}
+                % watched).
+              </p>
+            )}
+
             <div className="flex items-center gap-3 border-t pt-6">
-              <Button onClick={markComplete} disabled={pending}>
+              <Button
+                onClick={markComplete}
+                disabled={
+                  pending ||
+                  (gateActive && !isCurrentComplete && watchedPct < minWatch)
+                }
+              >
                 {pending ? <Loader2 className="animate-spin" /> : null}
                 {isCurrentComplete
                   ? "Mark complete again"
@@ -245,7 +303,7 @@ export function CoursePlayer({
                     ? "Complete & continue"
                     : "Mark complete"}
               </Button>
-              {nextLesson && (
+              {nextLesson && !gateActive && (
                 <Button asChild variant="outline">
                   <Link href={`/learn/${slug}?lesson=${nextLesson.id}`}>
                     Skip to next

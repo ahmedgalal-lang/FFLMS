@@ -79,7 +79,12 @@ export async function addLesson(
 export async function updateLesson(
   principal: Principal,
   lessonId: string,
-  data: { title?: string; isRequired?: boolean; estimatedMinutes?: number | null },
+  data: {
+    title?: string;
+    isRequired?: boolean;
+    estimatedMinutes?: number | null;
+    minWatchPercent?: number;
+  },
 ) {
   await authorizeLesson(principal, lessonId);
   return db.lesson.update({
@@ -90,8 +95,52 @@ export async function updateLesson(
       ...(data.estimatedMinutes !== undefined
         ? { estimatedMinutes: data.estimatedMinutes }
         : {}),
+      ...(data.minWatchPercent !== undefined
+        ? { minWatchPercent: Math.max(0, Math.min(100, data.minWatchPercent)) }
+        : {}),
     },
   });
+}
+
+/** Add an in-video question (cue point) to a lesson. */
+export async function addVideoQuestion(
+  principal: Principal,
+  lessonId: string,
+  data: { atSec: number; prompt: string; options: string[]; correct: number },
+) {
+  await authorizeLesson(principal, lessonId);
+  const options = data.options.map((o) => o.trim()).filter(Boolean);
+  if (data.prompt.trim().length < 1) {
+    throw new AppError("A question prompt is required.", 422, "BAD_INPUT");
+  }
+  if (options.length < 2) {
+    throw new AppError("Add at least two answer options.", 422, "BAD_INPUT");
+  }
+  if (data.correct < 0 || data.correct >= options.length) {
+    throw new AppError("Choose which option is correct.", 422, "BAD_INPUT");
+  }
+  return db.videoQuestion.create({
+    data: {
+      lessonId,
+      atSec: Math.max(0, Math.round(data.atSec)),
+      prompt: data.prompt.trim(),
+      options,
+      correct: data.correct,
+    },
+  });
+}
+
+export async function deleteVideoQuestion(
+  principal: Principal,
+  questionId: string,
+) {
+  const q = await db.videoQuestion.findUnique({
+    where: { id: questionId },
+    select: { lessonId: true },
+  });
+  if (!q) throw new NotFoundError("Question not found.");
+  await authorizeLesson(principal, q.lessonId);
+  await db.videoQuestion.delete({ where: { id: questionId } });
 }
 
 export async function deleteLesson(principal: Principal, lessonId: string) {

@@ -192,18 +192,37 @@ model Lesson {
   order            Int
   isRequired       Boolean   @default(true)
   estimatedMinutes Int?
+  // Gate advancing past this lesson until this % of its video is watched
+  // (0 = no gate). Set by the instructor/admin.
+  minWatchPercent  Int       @default(0)
   deletedAt        DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
-  module        Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  contentBlocks ContentBlock[]
-  quiz          Quiz?
-  assignment    Assignment?
-  progress      LessonProgress[]
+  module         Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  contentBlocks  ContentBlock[]
+  quiz           Quiz?
+  assignment     Assignment?
+  progress       LessonProgress[]
+  videoQuestions VideoQuestion[]
 
   @@unique([moduleId, order])
   @@index([moduleId])
+}
+
+// An in-video question shown at a timestamp; playback pauses until answered.
+model VideoQuestion {
+  id        String   @id @default(cuid())
+  lessonId  String
+  atSec     Int
+  prompt    String
+  options   String[]
+  correct   Int
+  createdAt DateTime @default(now())
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId])
 }
 
 model ContentBlock {
@@ -252,6 +271,8 @@ model LessonProgress {
   lessonId        String
   completedAt     DateTime?
   lastPositionSec Int?
+  // Accumulated seconds of the lesson video actually watched (for watch-gating).
+  videoWatchedSec Int       @default(0)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 

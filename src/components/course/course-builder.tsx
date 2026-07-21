@@ -39,9 +39,17 @@ import {
 } from "@/app/(teach)/studio/actions";
 import { ContentBlockEditor } from "@/components/course/content-block-editor";
 import { CourseSettingsDialog } from "@/components/course/course-settings-dialog";
+import { LessonVideoSettings } from "@/components/course/lesson-video-settings";
 
 type FullLesson = Lesson & {
   contentBlocks: ContentBlock[];
+  videoQuestions: {
+    id: string;
+    atSec: number;
+    prompt: string;
+    options: string[];
+    correct: number;
+  }[];
   quiz: { id: string } | null;
   assignment: { id: string } | null;
 };
@@ -262,6 +270,15 @@ export function CourseBuilder({
                     lessonId={lesson.id}
                     videoUploadEnabled={videoUploadEnabled}
                   />
+
+                  {lesson.contentBlocks.some((b) => b.type === "VIDEO") && (
+                    <LessonVideoSettings
+                      courseId={course.id}
+                      lessonId={lesson.id}
+                      minWatchPercent={lesson.minWatchPercent}
+                      questions={lesson.videoQuestions}
+                    />
+                  )}
 
                   <div className="mt-2 flex flex-wrap gap-2">
                     <Button asChild variant="outline" size="sm">

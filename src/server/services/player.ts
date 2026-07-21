@@ -2,6 +2,7 @@ import { db } from "@/server/db";
 import { authorize, type Principal } from "@/server/access/policy";
 import { NotFoundError } from "@/server/http";
 import { getResumeLessonId, getCompletedSet } from "@/server/services/progress";
+import { getVideoProgress } from "@/server/services/video-progress";
 
 /**
  * Load everything the course player needs for an enrolled student: the full
@@ -56,6 +57,7 @@ export async function loadPlayer(
         where: { id: currentId, deletedAt: null },
         include: {
           contentBlocks: { orderBy: { order: "asc" } },
+          videoQuestions: { orderBy: { atSec: "asc" } },
           quiz: { select: { id: true, title: true } },
           assignment: {
             select: {
@@ -71,6 +73,12 @@ export async function loadPlayer(
         },
       })
     : null;
+
+  // Saved video playback state (resume point + watched seconds) for gating.
+  const videoProgress =
+    currentLesson && currentId
+      ? await getVideoProgress(enrollment.id, currentId)
+      : { positionSec: 0, watchedSec: 0 };
 
   // The acting student's submission for the current lesson's assignment, if any.
   const mySubmission = currentLesson?.assignment
@@ -98,6 +106,7 @@ export async function loadPlayer(
     enrollment,
     completedIds: completed,
     currentLesson,
+    videoProgress,
     mySubmission,
     isCurrentComplete: currentId ? completed.has(currentId) : false,
   };
