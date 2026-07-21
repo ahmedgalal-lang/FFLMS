@@ -74,6 +74,17 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
         </fieldset>
       )}
 
+      {mode === "sign-in" && (
+        <div className="text-right">
+          <Link
+            href="/forgot-password"
+            className="text-sm text-muted-foreground hover:text-primary hover:underline"
+          >
+            Forgot password?
+          </Link>
+        </div>
+      )}
+
       {state?.error && (
         <p role="alert" className="text-sm text-destructive">
           {state.error}

@@ -38,6 +38,11 @@ const envSchema = z.object({
   S3_ACCESS_KEY_ID: z.string().optional().default(""),
   S3_SECRET_ACCESS_KEY: z.string().optional().default(""),
   S3_PUBLIC_URL: z.string().optional().default(""),
+  // Transactional email (optional). With RESEND_API_KEY set, emails are sent via
+  // Resend; otherwise they are logged (dev/no-provider fallback).
+  RESEND_API_KEY: z.string().optional().default(""),
+  EMAIL_FROM: z.string().optional().default("LMS <onboarding@resend.dev>"),
+  APP_URL: z.string().url().optional(),
   MAX_UPLOAD_MB: z.coerce.number().positive().default(50),
   NODE_ENV: z
     .enum(["development", "test", "production"])

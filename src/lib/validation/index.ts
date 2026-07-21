@@ -23,6 +23,17 @@ export const signInSchema = z.object({
   password: z.string().min(1),
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
+export const resetPasswordSchema = z.object({
+  email: z.string().email(),
+  token: z.string().min(10),
+  password: z.string().min(8, "Use at least 8 characters").max(200),
+});
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
 // ---------- Course ----------
 
 export const courseCreateSchema = z.object({
