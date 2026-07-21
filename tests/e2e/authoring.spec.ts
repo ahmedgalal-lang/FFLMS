@@ -18,6 +18,16 @@ test.describe("US1: authoring & publishing", () => {
     // Lands on the builder.
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
 
+    // Edit course settings: rename the course and confirm it persists.
+    const renamed = `${title} (edited)`;
+    await page.getByRole("button", { name: "Settings" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Course settings" }),
+    ).toBeVisible();
+    await page.getByLabel("Title", { exact: true }).fill(renamed);
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await expect(page.getByRole("heading", { name: renamed })).toBeVisible();
+
     // Publish is gated until there is a module + lesson.
     await expect(page.getByText("Before you can publish:")).toBeVisible();
 
@@ -40,10 +50,10 @@ test.describe("US1: authoring & publishing", () => {
     await publishBtn.click();
     await expect(page.getByText("published", { exact: false })).toBeVisible();
 
-    // Appears in the catalog.
+    // Appears in the catalog under its edited title.
     await page.goto("/courses");
-    await page.getByLabel("Search courses").fill(title);
+    await page.getByLabel("Search courses").fill(renamed);
     await page.getByRole("button", { name: "Search" }).click();
-    await expect(page.getByText(title)).toBeVisible();
+    await expect(page.getByText(renamed)).toBeVisible();
   });
 });

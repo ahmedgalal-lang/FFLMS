@@ -79,10 +79,17 @@ export async function updateCourseAction(
   }
 }
 
-export async function deleteCourseAction(courseId: string) {
+export async function deleteCourseAction(
+  courseId: string,
+): Promise<ActionState> {
   const principal = await requirePrincipal();
-  await deleteCourse(principal, courseId);
+  try {
+    await deleteCourse(principal, courseId);
+  } catch (err) {
+    return toState(err);
+  }
   revalidatePath("/studio");
+  revalidatePath("/courses");
   redirect("/studio");
 }
 

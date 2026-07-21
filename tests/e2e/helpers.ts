@@ -4,7 +4,7 @@ import { type Page, expect } from "@playwright/test";
 export async function signIn(page: Page, email: string, password = "password123") {
   await page.goto("/sign-in");
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
+  await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
   await page.waitForURL(/\/(studio|my-learning|admin)/);
 }

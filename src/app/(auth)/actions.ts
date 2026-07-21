@@ -1,5 +1,7 @@
 "use server";
 
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { registerUser } from "@/server/services/account";
 import { signIn } from "@/server/auth";
 import {
@@ -91,27 +93,44 @@ export async function signInAction(
 ): Promise<AuthFormState> {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
+  const remember = formData.get("remember") != null;
   if (!email || !password) {
     return { error: "Enter your email and password." };
   }
   try {
-    await signIn("credentials", {
-      email,
-      password,
-      redirectTo: "/dashboard",
-    });
-  } catch (err) {
-    // next-auth throws a redirect on success; re-throw those.
-    if (err instanceof Error && err.message === "NEXT_REDIRECT") throw err;
-    if (
-      typeof err === "object" &&
-      err !== null &&
-      "digest" in err &&
-      String((err as { digest?: string }).digest).startsWith("NEXT_REDIRECT")
-    ) {
-      throw err;
-    }
+    // redirect: false so we can adjust the session cookie before navigating.
+    await signIn("credentials", { email, password, redirect: false });
+  } catch {
     return { error: "Invalid email or password." };
   }
-  return undefined;
+  // "Remember me" unchecked → make the session cookie ephemeral (cleared when
+  // the browser closes) instead of the default persistent lifetime.
+  if (!remember) {
+    await makeSessionCookieEphemeral();
+  }
+  redirect("/dashboard");
+}
+
+/**
+ * Re-write the Auth.js session cookie without an expiry so it becomes a
+ * browser-session cookie. Covers both the plain and __Secure- cookie names
+ * (production over HTTPS uses the __Secure- prefix).
+ */
+async function makeSessionCookieEphemeral() {
+  const store = await cookies();
+  const candidates = [
+    "authjs.session-token",
+    "__Secure-authjs.session-token",
+  ];
+  for (const name of candidates) {
+    const existing = store.get(name);
+    if (!existing) continue;
+    store.set(name, existing.value, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: name.startsWith("__Secure-"),
+      path: "/",
+      // No maxAge/expires → cleared when the browser session ends.
+    });
+  }
 }

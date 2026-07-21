@@ -38,6 +38,7 @@ import {
   submitForReviewAction,
 } from "@/app/(teach)/studio/actions";
 import { ContentBlockEditor } from "@/components/course/content-block-editor";
+import { CourseSettingsDialog } from "@/components/course/course-settings-dialog";
 
 type FullLesson = Lesson & {
   contentBlocks: ContentBlock[];
@@ -52,10 +53,12 @@ const blockIcon = { TEXT: FileText, VIDEO: Video, FILE: Paperclip } as const;
 export function CourseBuilder({
   course,
   publishProblems,
+  categories,
   videoUploadEnabled,
 }: {
   course: FullCourse;
   publishProblems: string[];
+  categories: { id: string; name: string }[];
   videoUploadEnabled: boolean;
 }) {
   const router = useRouter();
@@ -91,6 +94,17 @@ export function CourseBuilder({
           <Badge variant={isPublished ? "success" : "secondary"}>
             {course.status.toLowerCase().replace("_", " ")}
           </Badge>
+          <CourseSettingsDialog
+            course={{
+              id: course.id,
+              title: course.title,
+              summary: course.summary,
+              description: course.description,
+              categoryId: course.categoryId,
+              completionThreshold: course.completionThreshold,
+            }}
+            categories={categories}
+          />
           <Button asChild variant="outline" size="sm">
             <Link href={`/studio/${course.id}/gradebook`}>
               <BarChart3 /> Gradebook
