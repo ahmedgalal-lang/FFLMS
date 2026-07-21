@@ -13,6 +13,7 @@ import {
   Loader2,
 } from "lucide-react";
 import type { ContentBlock } from "@prisma/client";
+import { isEmbedVideo } from "@/lib/video";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
@@ -270,15 +271,28 @@ function LessonBlock({ block }: { block: ContentBlock }) {
     );
   }
   if (block.type === "VIDEO") {
+    const src = block.mediaUrl ?? "";
     return (
       <div className="aspect-video overflow-hidden rounded-lg border bg-black">
-        <iframe
-          src={block.mediaUrl ?? ""}
-          title="Lesson video"
-          className="h-full w-full"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
+        {isEmbedVideo(src) ? (
+          <iframe
+            src={src}
+            title="Lesson video"
+            className="h-full w-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        ) : (
+          <video
+            src={src}
+            controls
+            controlsList="nodownload"
+            className="h-full w-full"
+            preload="metadata"
+          >
+            Your browser does not support embedded video.
+          </video>
+        )}
       </div>
     );
   }

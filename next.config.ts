@@ -6,7 +6,8 @@ const isDev = process.env.NODE_ENV !== "production";
  * Content Security Policy. `unsafe-inline`/`unsafe-eval` for scripts are needed
  * by Next's runtime (a strict nonce-based CSP would require middleware); the
  * policy still blocks framing, mixed content, and untrusted object/base URLs.
- * img/frame allow https + data: for avatars (data URLs) and video embeds.
+ * img/frame allow https + data: for avatars (data URLs) and video embeds;
+ * connect-src allows https so the browser can upload video directly to storage.
  */
 const csp = [
   "default-src 'self'",
@@ -14,8 +15,8 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self'",
-  "media-src 'self' https:",
+  "connect-src 'self' https:",
+  "media-src 'self' https: blob:",
   "frame-src 'self' https:",
   "frame-ancestors 'none'",
   "base-uri 'self'",

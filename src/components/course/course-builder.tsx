@@ -52,9 +52,11 @@ const blockIcon = { TEXT: FileText, VIDEO: Video, FILE: Paperclip } as const;
 export function CourseBuilder({
   course,
   publishProblems,
+  videoUploadEnabled,
 }: {
   course: FullCourse;
   publishProblems: string[];
+  videoUploadEnabled: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -243,6 +245,7 @@ export function CourseBuilder({
                   <ContentBlockEditor
                     courseId={course.id}
                     lessonId={lesson.id}
+                    videoUploadEnabled={videoUploadEnabled}
                   />
 
                   <div className="mt-2 flex flex-wrap gap-2">

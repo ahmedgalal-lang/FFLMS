@@ -25,6 +25,23 @@ function normalizeDatabaseEnv() {
 }
 normalizeDatabaseEnv();
 
+/**
+ * Supabase Storage powers large-media (video) uploads: the browser uploads
+ * directly to Supabase via a server-minted signed URL, so files never pass
+ * through the app's request body (Vercel caps that at ~4.5MB). Vercel's Supabase
+ * integration injects NEXT_PUBLIC_SUPABASE_URL; bridge it to SUPABASE_URL so the
+ * server can construct storage endpoints without extra config.
+ */
+function normalizeSupabaseEnv() {
+  process.env.SUPABASE_URL =
+    process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+  process.env.SUPABASE_SERVICE_ROLE_KEY =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SERVICE_KEY ||
+    "";
+}
+normalizeSupabaseEnv();
+
 const envSchema = z.object({
   DATABASE_URL: z.string().url(),
   DIRECT_URL: z.string().url().optional(),
@@ -44,6 +61,11 @@ const envSchema = z.object({
   EMAIL_FROM: z.string().optional().default("LMS <onboarding@resend.dev>"),
   APP_URL: z.string().url().optional(),
   MAX_UPLOAD_MB: z.coerce.number().positive().default(50),
+  // Supabase Storage (optional) for direct-to-storage video uploads.
+  SUPABASE_URL: z.string().optional().default(""),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().optional().default(""),
+  SUPABASE_STORAGE_BUCKET: z.string().optional().default("media"),
+  MAX_VIDEO_MB: z.coerce.number().positive().default(500),
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
@@ -63,3 +85,7 @@ function loadEnv() {
 export const env = loadEnv();
 
 export const isOAuthEnabled = env.AUTH_GITHUB_ID !== "" && env.AUTH_GITHUB_SECRET !== "";
+
+/** Whether direct-to-Supabase video uploads are available (URL + service key set). */
+export const isSupabaseStorageEnabled =
+  env.SUPABASE_URL !== "" && env.SUPABASE_SERVICE_ROLE_KEY !== "";

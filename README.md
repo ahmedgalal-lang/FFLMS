@@ -42,8 +42,11 @@ analytics — is built, tested, and deployable. See
 - **Profiles** — every user can upload an avatar (stored in-DB as a data URL),
   edit basic info/bio, and change their password.
 
-**Storage & email** — file uploads (lesson/assignment attachments) are stored in
-the database (no external object store required); email uses Resend when
+**Storage & email** — document/image attachments are stored in the database (no
+external object store required). **Video** uploads go to **Supabase Storage**
+(the browser uploads directly, so large files bypass the app's request-body
+limit) and play in-app via a native `<video>` player; instructors can instead
+paste a YouTube/Vimeo link or a direct video URL. Email uses Resend when
 configured and falls back to structured logs otherwise.
 
 **Security** — sanitized rich text (XSS), security headers (CSP, HSTS,

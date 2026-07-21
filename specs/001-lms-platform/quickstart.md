@@ -75,9 +75,15 @@ pnpm exec playwright test
 
 ## Notes
 
-- **File uploads are stored in the database** (`FileAsset` table; avatars as
-  data URLs via `POST /api/files`) — no S3/MinIO or other external object store
-  is required. A 5 MB per-file cap applies.
+- **Document/image uploads are stored in the database** (`FileAsset` table;
+  avatars as data URLs via `POST /api/files`) — no S3/MinIO required. A 5 MB
+  per-file cap applies.
+- **Video uploads use Supabase Storage.** Set `SUPABASE_URL` +
+  `SUPABASE_SERVICE_ROLE_KEY` and create a **public** bucket named
+  `media` (or set `SUPABASE_STORAGE_BUCKET`). The browser uploads directly to
+  Supabase, so large files never hit the app server. Without it configured, the
+  in-app video upload button is hidden and instructors paste a YouTube/Vimeo or
+  direct video URL instead (the player auto-detects embed vs. direct file).
 - **Email** (password reset, notifications) uses Resend when `RESEND_API_KEY` is
   set; otherwise messages are logged to the console — the flow still works
   locally via the logged reset link.

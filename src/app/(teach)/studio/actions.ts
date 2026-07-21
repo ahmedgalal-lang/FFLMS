@@ -20,6 +20,10 @@ import {
 } from "@/server/services/curriculum";
 import { publishCourse, unpublishCourse } from "@/server/services/publish";
 import { submitForReview } from "@/server/services/review";
+import {
+  createVideoUploadTicket,
+  type VideoUploadTicket,
+} from "@/server/services/media";
 import { courseCreateSchema, contentBlockSchema } from "@/lib/validation";
 import { AppError } from "@/server/http";
 import { AuthorizationError } from "@/server/access/policy";
@@ -176,6 +180,20 @@ export async function addContentBlockAction(
     return { ok: true };
   } catch (err) {
     return toState(err);
+  }
+}
+
+export async function createVideoUploadTicketAction(input: {
+  fileName: string;
+  contentType: string;
+  size: number;
+}): Promise<{ ticket: VideoUploadTicket } | { error: string }> {
+  const principal = await requirePrincipal();
+  try {
+    const ticket = await createVideoUploadTicket(principal, input);
+    return { ticket };
+  } catch (err) {
+    return { error: toState(err)?.error ?? "Upload failed." };
   }
 }
 
