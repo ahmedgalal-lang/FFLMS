@@ -89,9 +89,10 @@ export function CoursePlayer({
   const [error, setError] = useState<string | null>(null);
   const [watchedPct, setWatchedPct] = useState(0);
 
-  // The first controllable (native file) video block gates advancement.
+  // The first controllable video block (file / YouTube / Vimeo — not an
+  // uncontrolled embed like Drive) gates advancement.
   const gateVideoBlock = currentLesson?.contentBlocks.find(
-    (b) => b.type === "VIDEO" && videoProvider(b.mediaUrl ?? "") === "file",
+    (b) => b.type === "VIDEO" && videoProvider(b.mediaUrl ?? "") !== "embed",
   );
   const minWatch = currentLesson?.minWatchPercent ?? 0;
   const gateActive = minWatch > 0 && !!gateVideoBlock;
@@ -225,27 +226,34 @@ export function CoursePlayer({
 
             <div className="space-y-6">
               {currentLesson.contentBlocks.map((block) => {
-                // The gating video uses the interactive player (resume,
-                // watch-tracking, in-video questions).
-                if (block.id === gateVideoBlock?.id) {
+                // Videos use the interactive player (resume, watch-tracking,
+                // in-video questions). The gating block also feeds the watch
+                // meter and carries the saved position + cue questions.
+                if (block.type === "VIDEO") {
+                  const isGate = block.id === gateVideoBlock?.id;
                   return (
                     <VideoLesson
                       key={block.id}
                       lessonId={currentLesson.id}
                       src={block.mediaUrl ?? ""}
-                      provider="file"
-                      initialPositionSec={videoProgress.positionSec}
-                      initialWatchedSec={videoProgress.watchedSec}
-                      questions={currentLesson.videoQuestions}
-                      onWatched={(watchedSec, durationSec) =>
-                        setWatchedPct(
-                          durationSec > 0
-                            ? Math.min(
-                                100,
-                                Math.round((watchedSec / durationSec) * 100),
+                      provider={videoProvider(block.mediaUrl ?? "")}
+                      initialPositionSec={isGate ? videoProgress.positionSec : 0}
+                      initialWatchedSec={isGate ? videoProgress.watchedSec : 0}
+                      questions={isGate ? currentLesson.videoQuestions : []}
+                      onWatched={
+                        isGate
+                          ? (watchedSec, durationSec) =>
+                              setWatchedPct(
+                                durationSec > 0
+                                  ? Math.min(
+                                      100,
+                                      Math.round(
+                                        (watchedSec / durationSec) * 100,
+                                      ),
+                                    )
+                                  : 0,
                               )
-                            : 0,
-                        )
+                          : () => {}
                       }
                     />
                   );

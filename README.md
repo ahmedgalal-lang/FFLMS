@@ -45,9 +45,16 @@ analytics — is built, tested, and deployable. See
 **Storage & email** — document/image attachments are stored in the database (no
 external object store required). **Video** uploads go to **Supabase Storage**
 (the browser uploads directly, so large files bypass the app's request-body
-limit) and play in-app via a native `<video>` player; instructors can instead
-paste a YouTube/Vimeo link or a direct video URL. Email uses Resend when
-configured and falls back to structured logs otherwise.
+limit) and play in-app; instructors can instead paste a YouTube, Vimeo, or
+Google Drive link, or a direct video URL. Email uses Resend when configured and
+falls back to structured logs otherwise.
+
+**Interactive video** — for uploaded, YouTube, and Vimeo videos the player
+**resumes where the learner left off**, can **require watching a set %** before
+the lesson can be completed, and supports **in-video quiz cue points** that pause
+playback and ask a question the learner must answer to continue. (Google Drive
+embeds play but can't be tracked/gated — no playback API.) Instructors configure
+the watch-% and cue questions per lesson in the course builder.
 
 **Security** — sanitized rich text (XSS), security headers (CSP, HSTS,
 X-Frame-Options, etc.), and in-memory rate limiting on sign-in.
