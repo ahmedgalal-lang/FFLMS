@@ -55,7 +55,18 @@ export default async function VerifyResultPage({
         </div>
       )}
 
-      <div className="text-center">
+      <div className="flex justify-center gap-2">
+        {verdict.valid && (
+          <Button asChild>
+            <a
+              href={`/api/certificates/${encodeURIComponent(code)}/pdf`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Download PDF
+            </a>
+          </Button>
+        )}
         <Button asChild variant="outline">
           <Link href="/verify">Verify another</Link>
         </Button>

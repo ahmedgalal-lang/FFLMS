@@ -50,9 +50,20 @@ export default async function MyGradesPage({
               Code: <code>{certificate.verificationCode}</code>
             </p>
           </div>
-          <Button asChild variant="outline" size="sm">
-            <Link href={`/verify/${certificate.verificationCode}`}>Verify</Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button asChild variant="outline" size="sm">
+              <a
+                href={`/api/certificates/${certificate.verificationCode}/pdf`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Download PDF
+              </a>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/verify/${certificate.verificationCode}`}>Verify</Link>
+            </Button>
+          </div>
         </div>
       )}
 
