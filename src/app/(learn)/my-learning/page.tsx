@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { GraduationCap } from "lucide-react";
+import { GraduationCap, Award } from "lucide-react";
 import { requirePrincipal } from "@/server/auth";
 import { listMyEnrollments } from "@/server/services/enrollment";
 import { Progress } from "@/components/ui/progress";
@@ -29,36 +29,50 @@ export default async function MyLearningPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {enrollments.map((enr) => (
-            <Link
-              key={enr.id}
-              href={`/learn/${enr.course.slug}`}
-              className="flex flex-col gap-3 rounded-lg border bg-card p-5 transition-colors hover:border-primary sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <h2 className="font-semibold">{enr.course.title}</h2>
-                  {enr.status === "COMPLETED" && (
-                    <Badge variant="success">Completed</Badge>
-                  )}
+          {enrollments.map((enr) => {
+            const done = enr.status === "COMPLETED";
+            return (
+              <div
+                key={enr.id}
+                className="flex flex-col gap-3 rounded-lg border bg-card p-5 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/learn/${enr.course.slug}`}
+                      className="font-semibold hover:text-primary hover:underline"
+                    >
+                      {enr.course.title}
+                    </Link>
+                    {done && <Badge variant="success">Completed</Badge>}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {enr.course.instructor.name}
+                  </p>
+                  <div className="mt-3 flex items-center gap-3">
+                    <Progress value={enr.progressPercent} className="max-w-xs" />
+                    <span className="text-xs text-muted-foreground">
+                      {enr.progressPercent}%
+                    </span>
+                  </div>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {enr.course.instructor.name}
-                </p>
-                <div className="mt-3 flex items-center gap-3">
-                  <Progress value={enr.progressPercent} className="max-w-xs" />
-                  <span className="text-xs text-muted-foreground">
-                    {enr.progressPercent}%
-                  </span>
+                <div className="flex shrink-0 gap-2">
+                  {done && (
+                    <Button variant="default" size="sm" asChild>
+                      <Link href={`/learn/${enr.course.slug}/grades`}>
+                        <Award className="h-4 w-4" /> View certificate
+                      </Link>
+                    </Button>
+                  )}
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={`/learn/${enr.course.slug}`}>
+                      {done ? "Review" : enr.progressPercent > 0 ? "Continue" : "Start"}
+                    </Link>
+                  </Button>
                 </div>
               </div>
-              <Button variant="outline" size="sm" className="shrink-0" asChild>
-                <span>
-                  {enr.progressPercent > 0 ? "Continue" : "Start"}
-                </span>
-              </Button>
-            </Link>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
