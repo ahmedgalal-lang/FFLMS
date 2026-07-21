@@ -1,6 +1,6 @@
 # Quickstart: LMS Platform
 
-Local setup and smoke test for the LMS MVP (US1 authoring + US2 enroll & learn).
+Local setup and smoke test for the LMS platform (all 8 user stories).
 
 ## Prerequisites
 
@@ -39,15 +39,21 @@ Seeded accounts (password `password123`):
 pnpm dev            # http://localhost:3000
 ```
 
-## 4. Smoke test (MVP journey)
+## 4. Smoke test (core journey)
 
 1. Sign in as `instructor@lms.test` -> **Studio** -> **New course**.
 2. Add a module, add two lessons, add a text/video content block.
-3. **Publish** (disabled until the completeness gate passes).
-4. Sign out, sign in as `student@lms.test`.
-5. **Catalog** -> open the course -> **Enrol** -> land in the player.
-6. **Complete & continue** through lessons; watch progress reach 100%.
-7. Revisit **My Learning** — progress and completion persist.
+3. Optionally attach a **quiz** or **assignment** to a lesson.
+4. **Publish** (disabled until the completeness gate passes).
+5. Sign out, sign in as `student@lms.test`.
+6. **Catalog** -> open the course -> **Enrol** -> land in the player.
+7. **Complete & continue** through lessons; take the quiz / submit the
+   assignment; watch progress reach 100% and earn a **certificate**.
+8. Open **Grades** -> **Download PDF**, or **Verify** the certificate publicly.
+9. Revisit **My Learning** — progress and completion persist.
+
+The seeded `admin@lms.test` account can also exercise **US6** (Admin ->
+users/roles, review queue, categories, reports).
 
 ## 5. Quality gates
 
@@ -69,8 +75,15 @@ pnpm exec playwright test
 
 ## Notes
 
-- File uploads use presigned URLs (`POST /api/uploads`). Without S3/MinIO
-  configured, text and video content still work; file blocks return a clear
-  "storage not configured" error.
+- **File uploads are stored in the database** (`FileAsset` table; avatars as
+  data URLs via `POST /api/files`) — no S3/MinIO or other external object store
+  is required. A 5 MB per-file cap applies.
+- **Email** (password reset, notifications) uses Resend when `RESEND_API_KEY` is
+  set; otherwise messages are logged to the console — the flow still works
+  locally via the logged reset link.
+- **GitHub OAuth** activates only when `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET`
+  are set; email/password auth works without them.
 - Authorization is enforced server-side on every mutation via `authorize()` in
   `src/server/access/policy.ts`.
+- The suite is **98 unit/integration tests + 10 Playwright e2e journeys** (one
+  per user story).

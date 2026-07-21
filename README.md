@@ -10,24 +10,47 @@ users, approve courses, and view reports.
 
 ## Status
 
-🚀 **MVP implemented.** The shippable MVP — **US1 (course authoring & publishing)**
-and **US2 (enroll & learn with progress)** — is built and verified. Remaining
-user stories (quizzes, assignments, gradebook/certificates UI, admin console,
-discussions, analytics) follow `specs/001-lms-platform/tasks.md`.
+✅ **All 8 user stories implemented and verified.** The full platform — authoring,
+learning, quizzes, assignments, certificates, admin console, discussions, and
+analytics — is built, tested, and deployable. See
+`specs/001-lms-platform/tasks.md` for the task-level breakdown.
 
 **What works today**
 
-- Email/password + optional GitHub auth with role-based sessions (Admin /
-  Instructor / Student), enforced server-side via a central `authorize()` policy.
-- Instructor Studio: create courses, structure modules → lessons, add
-  video/text/file content blocks, and publish behind a completeness gate.
-- Public catalog with search/filter, course detail, idempotent enrollment.
-- Course player with lesson navigation, **mark complete**, resume point, live
-  progress, automatic course completion + certificate issuance.
-- **My Learning** dashboard with per-course progress.
+- **Auth & roles** — email/password (argon2) + optional GitHub auth with
+  role-based JWT sessions (Admin / Instructor / Student), enforced server-side via
+  a central deny-by-default `authorize()` policy. Self-service **password reset**
+  by email (US: account recovery).
+- **US1 — Authoring & publishing** — Instructor Studio: create courses, structure
+  modules → lessons, add video/text/file content blocks, and publish behind a
+  completeness gate. Rich text is sanitized server-side.
+- **US2 — Enroll & learn** — public catalog with search/filter, course detail,
+  idempotent enrollment; course player with lesson navigation, **mark complete**,
+  resume point, live progress, and automatic course completion.
+- **US3 — Quizzes** — quiz builder (single/multi choice), student taker, automated
+  grading with attempts and scoring.
+- **US4 — Assignments** — text/file submissions with instructor manual grading and
+  feedback.
+- **US5 — Certificates** — automatic issuance on completion, a public verification
+  page, revoke support, and a downloadable **PDF certificate** (pdf-lib).
+- **US6 — Admin console** — user CRUD & role/status management, course review
+  queue, category management, all tracked in an audit log.
+- **US7 — Discussions & notifications** — per-course discussion boards
+  (threads/posts), instructor announcements, and an in-app notification center.
+- **US8 — Analytics & reports** — instructor per-course analytics (completion
+  rate, per-lesson completion) and admin org-wide reports.
+- **Profiles** — every user can upload an avatar (stored in-DB as a data URL),
+  edit basic info/bio, and change their password.
 
-**Quality:** 37 unit/integration tests + 3 Playwright e2e journeys passing;
-`typecheck`, `lint`, and production `build` all green. See
+**Storage & email** — file uploads (lesson/assignment attachments) are stored in
+the database (no external object store required); email uses Resend when
+configured and falls back to structured logs otherwise.
+
+**Security** — sanitized rich text (XSS), security headers (CSP, HSTS,
+X-Frame-Options, etc.), and in-memory rate limiting on sign-in.
+
+**Quality:** 98 unit/integration tests + 10 Playwright e2e journeys (one per user
+story) passing; `typecheck`, `lint`, and production `build` all green. See
 [`quickstart.md`](specs/001-lms-platform/quickstart.md) to run it locally.
 
 ## Spec-Driven Planning Artifacts
@@ -46,7 +69,7 @@ The plan was produced with Spec Kit's workflow
 | Quickstart | [`specs/001-lms-platform/quickstart.md`](specs/001-lms-platform/quickstart.md) | Local setup & smoke test |
 | Tasks | [`specs/001-lms-platform/tasks.md`](specs/001-lms-platform/tasks.md) | 85 implementation tasks by user story |
 
-## Planned Tech Stack
+## Tech Stack
 
 - **Next.js 15** (App Router, React 19, RSC-first) + TypeScript `strict`
 - **PostgreSQL 16** via **Prisma** ORM
@@ -54,15 +77,31 @@ The plan was produced with Spec Kit's workflow
 - **Zod** validation shared client/server
 - **Tailwind CSS + shadcn/ui** (accessible primitives)
 - **Vitest** (unit/integration) + **Playwright** (e2e)
-- S3-compatible object storage for uploads; Redis/BullMQ for background jobs
+- **Database-backed file storage** (no external object store needed)
+- **pdf-lib** for certificate PDFs; **Resend** (optional) for transactional email
+- Deploys to **Vercel** with **Supabase** Postgres
 
-## MVP Scope
+## Running locally
 
-User Story 1 (course authoring/publishing) + User Story 2 (enroll & learn with
-progress) form the shippable MVP — see `tasks.md` phases 1–4.
+See [`quickstart.md`](specs/001-lms-platform/quickstart.md) for full setup. In
+short:
 
-## Working with the plan
+```bash
+pnpm install
+cp .env.example .env          # adjust DATABASE_URL / DIRECT_URL / AUTH_SECRET
+pnpm db:migrate               # apply migrations
+pnpm db:seed                  # seed demo accounts + a sample course
+pnpm dev                      # http://localhost:3000
+```
+
+Seeded accounts (password `password123`): `admin@lms.test`,
+`instructor@lms.test`, `student@lms.test`.
+
+**Test commands:** `pnpm test` (unit/integration), `pnpm test:e2e` (Playwright),
+`pnpm typecheck`, `pnpm lint`, `pnpm build`.
+
+## Spec-Driven Planning
 
 Spec Kit skills are installed under `.claude/skills/` (e.g. `/speckit-plan`,
-`/speckit-tasks`, `/speckit-implement`, `/speckit-analyze`). To begin building,
-follow the tasks in order starting from Phase 1.
+`/speckit-tasks`, `/speckit-implement`, `/speckit-analyze`). The implementation
+follows the tasks in `specs/001-lms-platform/tasks.md`.
