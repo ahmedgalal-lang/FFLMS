@@ -6,6 +6,16 @@
 
 const YT_HOSTS = ["youtube.com", "www.youtube.com", "youtu.be", "m.youtube.com"];
 const VIMEO_HOSTS = ["vimeo.com", "www.vimeo.com", "player.vimeo.com"];
+const DRIVE_HOSTS = ["drive.google.com", "docs.google.com"];
+
+/** Extract a Google Drive file id from any of its share/link forms. */
+function driveFileId(u: URL): string | null {
+  // .../file/d/FILE_ID/view  or  .../d/FILE_ID/...
+  const m = u.pathname.match(/\/(?:file\/)?d\/([^/]+)/);
+  if (m?.[1]) return m[1];
+  // ...?id=FILE_ID  (open?id=, uc?id=, etc.)
+  return u.searchParams.get("id");
+}
 
 /**
  * Convert common YouTube/Vimeo share URLs to their embeddable player URL so an
@@ -43,6 +53,12 @@ export function normalizeVideoUrl(input: string): string {
     const id = u.pathname.split("/").filter(Boolean)[0];
     return id && /^\d+$/.test(id) ? `https://player.vimeo.com/video/${id}` : raw;
   }
+  if (DRIVE_HOSTS.includes(host)) {
+    // Already a preview embed? Leave it alone.
+    if (u.pathname.endsWith("/preview")) return raw;
+    const id = driveFileId(u);
+    return id ? `https://drive.google.com/file/d/${id}/preview` : raw;
+  }
   return raw;
 }
 
@@ -56,6 +72,7 @@ export function isEmbedVideo(url: string): boolean {
     return (
       YT_HOSTS.includes(host) ||
       VIMEO_HOSTS.includes(host) ||
+      DRIVE_HOSTS.includes(host) ||
       host.endsWith("youtube-nocookie.com")
     );
   } catch {

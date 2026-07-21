@@ -177,7 +177,7 @@ export function ContentBlockEditor({
             <Input
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              placeholder="YouTube/Vimeo link or direct video URL"
+              placeholder="YouTube, Google Drive, Vimeo, or direct video URL"
               aria-label="Video URL"
               type="url"
             />

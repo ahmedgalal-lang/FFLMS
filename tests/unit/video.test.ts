@@ -26,6 +26,23 @@ describe("normalizeVideoUrl", () => {
     );
   });
 
+  it("converts a Google Drive share link to a preview embed", () => {
+    expect(
+      normalizeVideoUrl("https://drive.google.com/file/d/1AbCdEf/view?usp=sharing"),
+    ).toBe("https://drive.google.com/file/d/1AbCdEf/preview");
+  });
+
+  it("converts a Google Drive open?id link to a preview embed", () => {
+    expect(
+      normalizeVideoUrl("https://drive.google.com/open?id=1AbCdEf"),
+    ).toBe("https://drive.google.com/file/d/1AbCdEf/preview");
+  });
+
+  it("leaves an already-preview Drive URL unchanged", () => {
+    const preview = "https://drive.google.com/file/d/1AbCdEf/preview";
+    expect(normalizeVideoUrl(preview)).toBe(preview);
+  });
+
   it("passes through an already-embed URL unchanged", () => {
     const embed = "https://www.youtube.com/embed/gSSsZReIFRk";
     expect(normalizeVideoUrl(embed)).toBe(embed);
@@ -42,9 +59,10 @@ describe("normalizeVideoUrl", () => {
 });
 
 describe("isEmbedVideo", () => {
-  it("treats YouTube/Vimeo hosts as embeds", () => {
+  it("treats YouTube/Vimeo/Drive hosts as embeds", () => {
     expect(isEmbedVideo("https://www.youtube.com/embed/x")).toBe(true);
     expect(isEmbedVideo("https://player.vimeo.com/video/1")).toBe(true);
+    expect(isEmbedVideo("https://drive.google.com/file/d/1AbCdEf/preview")).toBe(true);
   });
 
   it("treats a direct media file as a non-embed", () => {
