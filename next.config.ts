@@ -46,10 +46,6 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   serverExternalPackages: ["argon2", "@prisma/client", "pino"],
-  // Bundle the certificate fonts with the serverless function that renders PDFs.
-  outputFileTracingIncludes: {
-    "/api/certificates/**": ["./src/server/assets/fonts/*.ttf"],
-  },
   experimental: {
     serverActions: { bodySizeLimit: "6mb" },
   },

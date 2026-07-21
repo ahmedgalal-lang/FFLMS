@@ -1,8 +1,8 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import { convertArabic } from "arabic-reshaper";
+import { amiriRegularBase64 } from "@/server/assets/fonts/regular";
+import { amiriBoldBase64 } from "@/server/assets/fonts/bold";
 
 /**
  * Render a self-contained certificate PDF. Names and course titles can contain
@@ -37,14 +37,12 @@ function shapeForPdf(text: string): string {
 }
 
 let fontsCache: { regular: Uint8Array; bold: Uint8Array } | null = null;
-async function loadFonts() {
+function loadFonts() {
   if (fontsCache) return fontsCache;
-  const dir = path.join(process.cwd(), "src/server/assets/fonts");
-  const [regular, bold] = await Promise.all([
-    readFile(path.join(dir, "Amiri-Regular.ttf")),
-    readFile(path.join(dir, "Amiri-Bold.ttf")),
-  ]);
-  fontsCache = { regular: new Uint8Array(regular), bold: new Uint8Array(bold) };
+  fontsCache = {
+    regular: new Uint8Array(Buffer.from(amiriRegularBase64, "base64")),
+    bold: new Uint8Array(Buffer.from(amiriBoldBase64, "base64")),
+  };
   return fontsCache;
 }
 
@@ -63,7 +61,7 @@ export async function renderCertificatePdf(params: {
   let unicode = true;
   try {
     doc.registerFontkit(fontkit);
-    const fonts = await loadFonts();
+    const fonts = loadFonts();
     body = await doc.embedFont(fonts.regular, { subset: true });
     heading = await doc.embedFont(fonts.bold, { subset: true });
   } catch {
