@@ -21,9 +21,16 @@ const statusVariant: Record<
 
 export default async function StudioPage() {
   const principal = await requirePrincipal();
-  const [courses, categories] = await Promise.all([
+  const [courses, categories, instructors] = await Promise.all([
     listInstructorCourses(principal),
     db.category.findMany({ orderBy: { name: "asc" } }),
+    principal.role === "ADMIN"
+      ? db.user.findMany({
+          where: { role: "INSTRUCTOR", status: "ACTIVE" },
+          orderBy: { name: "asc" },
+          select: { id: true, name: true, email: true },
+        })
+      : Promise.resolve(null),
   ]);
 
   return (
@@ -35,7 +42,7 @@ export default async function StudioPage() {
             Create, structure, and publish courses.
           </p>
         </div>
-        <CreateCourseDialog categories={categories} />
+        <CreateCourseDialog categories={categories} instructors={instructors} />
       </div>
 
       {courses.length === 0 ? (

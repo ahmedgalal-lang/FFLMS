@@ -6,7 +6,7 @@ import {
   type CourseCreateInput,
   type CourseUpdateInput,
 } from "@/lib/validation";
-import { NotFoundError, ConflictError } from "@/server/http";
+import { AppError, NotFoundError, ConflictError } from "@/server/http";
 import { slugify } from "@/lib/utils";
 
 /** Load a course's authorization-relevant attributes, or throw 404. */
@@ -37,6 +37,8 @@ export async function createCourse(
   authorize(principal, { type: "course:create" });
   const data = courseCreateSchema.parse(input);
 
+  const instructorId = await resolveCourseOwner(principal, data.instructorId);
+
   return db.course.create({
     data: {
       title: data.title,
@@ -45,10 +47,37 @@ export async function createCourse(
       description: data.description ?? "",
       categoryId: data.categoryId ?? null,
       coverImageUrl: data.coverImageUrl ?? null,
-      instructorId: principal.id,
+      instructorId,
       status: "DRAFT",
     },
   });
+}
+
+/**
+ * Instructors always own the courses they create. Admins may instead assign
+ * a course directly to a named instructor (so it shows up in that
+ * instructor's own Studio) rather than defaulting to the admin's own
+ * account.
+ */
+async function resolveCourseOwner(
+  principal: Principal,
+  requestedInstructorId: string | null | undefined,
+): Promise<string> {
+  if (principal.role !== "ADMIN" || !requestedInstructorId) {
+    return principal.id;
+  }
+  const instructor = await db.user.findUnique({
+    where: { id: requestedInstructorId },
+    select: { id: true, role: true },
+  });
+  if (!instructor || instructor.role !== "INSTRUCTOR") {
+    throw new AppError(
+      "Selected instructor account not found.",
+      422,
+      "INVALID_INSTRUCTOR",
+    );
+  }
+  return instructor.id;
 }
 
 export async function updateCourse(

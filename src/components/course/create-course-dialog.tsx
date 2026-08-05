@@ -17,8 +17,15 @@ import {
 import { createCourseAction, type ActionState } from "@/app/(teach)/studio/actions";
 
 type Category = { id: string; name: string };
+type Instructor = { id: string; name: string; email: string };
 
-export function CreateCourseDialog({ categories }: { categories: Category[] }) {
+export function CreateCourseDialog({
+  categories,
+  instructors,
+}: {
+  categories: Category[];
+  instructors: Instructor[] | null;
+}) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     createCourseAction,
@@ -71,6 +78,28 @@ export function CreateCourseDialog({ categories }: { categories: Category[] }) {
               ))}
             </select>
           </div>
+          {instructors && (
+            <div className="space-y-2">
+              <Label htmlFor="instructorId">Instructor</Label>
+              <select
+                id="instructorId"
+                name="instructorId"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                defaultValue=""
+              >
+                <option value="">— Myself (admin) —</option>
+                {instructors.map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.name} ({i.email})
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Assign this course to an instructor so it appears in their
+                Studio instead of yours.
+              </p>
+            </div>
+          )}
           {state?.error && (
             <p role="alert" className="text-sm text-destructive">
               {state.error}

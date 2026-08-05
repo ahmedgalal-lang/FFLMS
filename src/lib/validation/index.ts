@@ -55,6 +55,10 @@ export const courseCreateSchema = z.object({
   description: z.string().max(20_000).optional().default(""),
   categoryId: z.string().cuid().optional().nullable(),
   coverImageUrl: courseImageValue.optional().nullable(),
+  // Admin-only: assign the course to a specific instructor instead of the
+  // admin's own account. Ignored (and the acting principal is used) for
+  // non-admin callers.
+  instructorId: z.string().cuid().optional().nullable(),
 });
 export type CourseCreateInput = z.infer<typeof courseCreateSchema>;
 

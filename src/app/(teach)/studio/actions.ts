@@ -48,6 +48,7 @@ export async function createCourseAction(
     summary: formData.get("summary"),
     description: formData.get("description") ?? "",
     categoryId: (formData.get("categoryId") as string) || null,
+    instructorId: (formData.get("instructorId") as string) || null,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid course." };
