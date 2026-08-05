@@ -37,7 +37,7 @@ export async function SiteHeader() {
                 My Learning
               </Link>
             )}
-            {user?.role === "INSTRUCTOR" && (
+            {(user?.role === "INSTRUCTOR" || user?.role === "ADMIN") && (
               <Link
                 href="/studio"
                 className="text-muted-foreground hover:text-foreground"
