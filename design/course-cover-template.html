@@ -1,0 +1,165 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  :root {
+    --midnight: #0F2C69;
+    --navy: #1A1A39;
+    --orange: #F6AE2D;
+    --white: #FFFFFF;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 1600px;
+    height: 900px;
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    overflow: hidden;
+  }
+  .cover {
+    position: relative;
+    width: 1600px;
+    height: 900px;
+    background: linear-gradient(135deg, var(--midnight) 0%, var(--navy) 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  /* Orange diagonal accent panel, right third */
+  .accent {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: 46%;
+    background: var(--orange);
+    clip-path: polygon(38% 0, 100% 0, 100% 100%, 12% 100%);
+  }
+  /* faint graduation-cap glyph on the accent panel */
+  .glyph {
+    position: absolute;
+    right: 6%;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 340px;
+    height: 340px;
+    opacity: 0.16;
+  }
+  .content {
+    position: relative;
+    z-index: 2;
+    padding: 0 0 0 90px;
+    max-width: 900px;
+  }
+  .kicker {
+    color: var(--orange);
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    margin-bottom: 22px;
+  }
+  .title {
+    color: var(--white);
+    font-size: 84px;
+    font-weight: 900;
+    line-height: 1.02;
+    letter-spacing: -1px;
+    text-transform: uppercase;
+    max-width: 780px;
+    overflow-wrap: break-word;
+  }
+  .rule {
+    width: 96px;
+    height: 6px;
+    background: var(--orange);
+    margin-top: 34px;
+    border-radius: 3px;
+  }
+  .brandbar {
+    position: absolute;
+    left: 90px;
+    bottom: 56px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    z-index: 2;
+  }
+  .brandmark {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .brandmark svg { width: 30px; height: 30px; }
+  .brandname {
+    color: var(--white);
+    font-size: 24px;
+    font-weight: 800;
+  }
+  .divider {
+    width: 2px;
+    height: 22px;
+    background: rgba(255,255,255,0.35);
+  }
+  .tagline {
+    color: var(--orange);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+  /* small color-swatch motif, echoes the brand guideline swatches */
+  .swatches {
+    position: absolute;
+    top: 56px;
+    left: 90px;
+    display: flex;
+    gap: 10px;
+    z-index: 2;
+  }
+  .swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+  }
+  .s1 { background: var(--white); }
+  .s2 { background: var(--orange); }
+  .s3 { background: var(--navy); border: 1px solid rgba(255,255,255,0.25); }
+</style>
+</head>
+<body>
+  <div class="cover">
+    <div class="accent"></div>
+    <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="#0F2C69" stroke-width="1.4">
+      <path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/>
+      <path d="M22 10v6"/>
+      <path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/>
+    </svg>
+
+    <div class="swatches">
+      <div class="swatch s1"></div>
+      <div class="swatch s2"></div>
+      <div class="swatch s3"></div>
+    </div>
+
+    <div class="content">
+      <div class="kicker">ForeFront Learning</div>
+      <div class="title" id="title">{{TITLE}}</div>
+      <div class="rule"></div>
+    </div>
+
+    <div class="brandbar">
+      <div class="brandmark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#F6AE2D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/>
+          <path d="M22 10v6"/>
+          <path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/>
+        </svg>
+        <span class="brandname">ForeFront</span>
+      </div>
+      <div class="divider"></div>
+      <div class="tagline">LMS Platform</div>
+    </div>
+  </div>
+</body>
+</html>
