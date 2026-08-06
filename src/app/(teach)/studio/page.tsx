@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Users } from "lucide-react";
 import { requirePrincipal } from "@/server/auth";
 import { listInstructorCourses } from "@/server/services/course";
 import { db } from "@/server/db";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { CreateCourseDialog } from "@/components/course/create-course-dialog";
 import type { CourseStatus } from "@prisma/client";
 
@@ -42,7 +44,14 @@ export default async function StudioPage() {
             Create, structure, and publish courses.
           </p>
         </div>
-        <CreateCourseDialog categories={categories} instructors={instructors} />
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline">
+            <Link href="/studio/groups">
+              <Users /> Groups
+            </Link>
+          </Button>
+          <CreateCourseDialog categories={categories} instructors={instructors} />
+        </div>
       </div>
 
       {courses.length === 0 ? (

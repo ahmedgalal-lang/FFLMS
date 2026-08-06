@@ -61,6 +61,8 @@ The single source of truth for who may do what. `can()`/`authorize()` are **pure
 
 Adding a permission means adding a variant to the `Action` union and a case to the `can()` switch — the compiler then finds every call site. `src/server/auth/index.ts` provides `getPrincipal()` (nullable) and `requirePrincipal()` (throws `AuthorizationError`).
 
+Watch for name collisions when adding actions: `assignment:manage` already means "manage a lesson's gradable Assignment" (`src/server/services/assignment.ts`). The unrelated course-access-grant feature (specs/002-assign-courses) uses `course-assignment:manage` and a `CourseAssignment` Prisma model specifically to avoid colliding with it — don't rename either back to the shorter form.
+
 ### Two mutation entry points
 
 - **Server actions** (`src/app/**/actions.ts`) — the default for UI-driven mutations. They catch errors and return an `ActionState` (`{ error?: string; ok?: boolean }`) for `useActionState`; they never let exceptions escape to the client.
