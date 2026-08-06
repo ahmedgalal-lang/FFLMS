@@ -63,6 +63,7 @@ export type Action =
   | { type: "assignment:submit"; enrollment: EnrollmentResource }
   | { type: "assignment:grade"; course: CourseResource }
   | { type: "gradebook:read"; course: CourseResource }
+  | { type: "certificate:manage"; course: CourseResource }
   // Discussions & announcements
   | { type: "discussion:participate"; course: CourseResource; isEnrolled: boolean }
   | { type: "announcement:create"; course: CourseResource }
@@ -70,7 +71,8 @@ export type Action =
   | { type: "admin:users" }
   | { type: "admin:review" }
   | { type: "admin:categories" }
-  | { type: "admin:reports" };
+  | { type: "admin:reports" }
+  | { type: "admin:certificates" };
 
 const isAdmin = (p: Principal) => p.role === "ADMIN";
 const owns = (p: Principal, course: CourseResource) =>
@@ -119,6 +121,7 @@ export function can(principal: Principal, action: Action): boolean {
     case "assignment:manage":
     case "assignment:grade":
     case "gradebook:read":
+    case "certificate:manage":
     case "announcement:create":
     case "course-assignment:manage":
       return owns(principal, action.course);
@@ -149,6 +152,7 @@ export function can(principal: Principal, action: Action): boolean {
     case "admin:review":
     case "admin:categories":
     case "admin:reports":
+    case "admin:certificates":
       return false; // only admins, already returned true above
 
     default:

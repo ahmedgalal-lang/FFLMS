@@ -313,6 +313,11 @@ export const adminUsersQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
 });
 
+export const adminCertificatesQuerySchema = z.object({
+  q: z.string().max(160).optional(),
+  page: z.coerce.number().int().min(1).optional().default(1),
+});
+
 // ---------- Discussions & announcements ----------
 
 export const threadCreateSchema = z.object({

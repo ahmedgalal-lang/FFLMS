@@ -1,6 +1,7 @@
+import type { Prisma } from "@prisma/client";
 import { db } from "@/server/db";
 import { authorize, type Principal } from "@/server/access/policy";
-import { NotFoundError } from "@/server/http";
+import { NotFoundError, type PageParams } from "@/server/http";
 import { loadCourseForAuthz } from "@/server/services/course";
 
 /**
@@ -81,11 +82,88 @@ export async function revokeCertificate(
   });
   if (!cert) throw new NotFoundError("Certificate not found.");
   const course = await loadCourseForAuthz(cert.courseId);
-  // Reuse the gradebook/course-management authorization.
-  authorize(principal, { type: "gradebook:read", course });
+  authorize(principal, { type: "certificate:manage", course });
 
   return db.certificate.update({
     where: { id: certificateId },
     data: { revokedAt: cert.revokedAt ?? new Date() },
   });
+}
+
+/** Restore a mistakenly revoked certificate. */
+export async function reinstateCertificate(
+  principal: Principal,
+  certificateId: string,
+) {
+  const cert = await db.certificate.findUnique({
+    where: { id: certificateId },
+    select: { id: true, courseId: true },
+  });
+  if (!cert) throw new NotFoundError("Certificate not found.");
+  const course = await loadCourseForAuthz(cert.courseId);
+  authorize(principal, { type: "certificate:manage", course });
+
+  return db.certificate.update({
+    where: { id: certificateId },
+    data: { revokedAt: null },
+  });
+}
+
+/** All certificates issued for one course — instructor of that course, or an admin. */
+export async function listCourseCertificates(
+  principal: Principal,
+  courseId: string,
+) {
+  const course = await loadCourseForAuthz(courseId);
+  authorize(principal, { type: "certificate:manage", course });
+
+  return db.certificate.findMany({
+    where: { courseId },
+    orderBy: { issuedAt: "desc" },
+    select: {
+      id: true,
+      verificationCode: true,
+      issuedAt: true,
+      revokedAt: true,
+      student: { select: { id: true, name: true, email: true } },
+    },
+  });
+}
+
+/** Org-wide certificate listing for the admin console. */
+export async function listAllCertificates(
+  principal: Principal,
+  filter: { q?: string },
+  page: PageParams,
+) {
+  authorize(principal, { type: "admin:certificates" });
+
+  const where: Prisma.CertificateWhereInput = filter.q
+    ? {
+        OR: [
+          { student: { name: { contains: filter.q, mode: "insensitive" } } },
+          { student: { email: { contains: filter.q, mode: "insensitive" } } },
+          { course: { title: { contains: filter.q, mode: "insensitive" } } },
+        ],
+      }
+    : {};
+
+  const [items, total] = await Promise.all([
+    db.certificate.findMany({
+      where,
+      orderBy: { issuedAt: "desc" },
+      skip: page.skip,
+      take: page.pageSize,
+      select: {
+        id: true,
+        verificationCode: true,
+        issuedAt: true,
+        revokedAt: true,
+        student: { select: { id: true, name: true, email: true } },
+        course: { select: { id: true, title: true, slug: true } },
+      },
+    }),
+    db.certificate.count({ where }),
+  ]);
+  return { items, total };
 }

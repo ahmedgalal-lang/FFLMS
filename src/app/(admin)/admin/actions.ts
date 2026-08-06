@@ -16,6 +16,7 @@ import {
   updateCategory,
   deleteCategory,
 } from "@/server/services/category";
+import { revokeCertificate, reinstateCertificate } from "@/server/services/certificate";
 import {
   changeRoleSchema,
   setStatusSchema,
@@ -182,6 +183,28 @@ export async function deleteCategoryAction(categoryId: string): Promise<AdminSta
   try {
     await deleteCategory(principal, categoryId);
     revalidatePath("/admin/categories");
+    return { ok: true };
+  } catch (err) {
+    return toState(err);
+  }
+}
+
+export async function revokeCertificateAdminAction(certificateId: string): Promise<AdminState> {
+  const principal = await requirePrincipal();
+  try {
+    await revokeCertificate(principal, certificateId);
+    revalidatePath("/admin/certificates");
+    return { ok: true };
+  } catch (err) {
+    return toState(err);
+  }
+}
+
+export async function reinstateCertificateAdminAction(certificateId: string): Promise<AdminState> {
+  const principal = await requirePrincipal();
+  try {
+    await reinstateCertificate(principal, certificateId);
+    revalidatePath("/admin/certificates");
     return { ok: true };
   } catch (err) {
     return toState(err);

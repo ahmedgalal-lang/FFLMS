@@ -265,17 +265,38 @@ describe("enrollment & learning ownership", () => {
 });
 
 describe("admin actions", () => {
-  it("only admins may manage users, review, categories, reports", () => {
+  it("only admins may manage users, review, categories, reports, certificates", () => {
     for (const a of [
       "admin:users",
       "admin:review",
       "admin:categories",
       "admin:reports",
+      "admin:certificates",
     ] as const) {
       expect(can(admin, { type: a })).toBe(true);
       expect(can(instructor, { type: a })).toBe(false);
       expect(can(student, { type: a })).toBe(false);
     }
+  });
+});
+
+describe("certificate management", () => {
+  it("the owning instructor or an admin may manage a course's certificates", () => {
+    expect(
+      can(instructor, { type: "certificate:manage", course: ownedPublished }),
+    ).toBe(true);
+    expect(
+      can(admin, { type: "certificate:manage", course: foreignPublished }),
+    ).toBe(true);
+  });
+
+  it("a non-owning instructor or a student may not", () => {
+    expect(
+      can(otherInstructor, { type: "certificate:manage", course: ownedPublished }),
+    ).toBe(false);
+    expect(
+      can(student, { type: "certificate:manage", course: ownedPublished }),
+    ).toBe(false);
   });
 });
 

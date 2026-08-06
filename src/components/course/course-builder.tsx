@@ -17,6 +17,7 @@ import {
   MessageSquare,
   Loader2,
   UserPlus,
+  Award,
 } from "lucide-react";
 import type {
   Course,
@@ -129,6 +130,11 @@ export function CourseBuilder({
           <Button asChild variant="outline" size="sm">
             <Link href={`/studio/${course.id}/gradebook`}>
               <BarChart3 /> Gradebook
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/studio/${course.id}/certificates`}>
+              <Award /> Certificates
             </Link>
           </Button>
           <Button asChild variant="outline" size="sm">
