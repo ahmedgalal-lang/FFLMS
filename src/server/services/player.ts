@@ -3,6 +3,7 @@ import { authorize, type Principal } from "@/server/access/policy";
 import { NotFoundError } from "@/server/http";
 import { getResumeLessonId, getCompletedSet } from "@/server/services/progress";
 import { getVideoProgress } from "@/server/services/video-progress";
+import { loadActiveEnrollmentForAuthz } from "@/server/services/enrollment";
 
 /**
  * Load everything the course player needs for an enrolled student: the full
@@ -31,13 +32,12 @@ export async function loadPlayer(
   });
   if (!course) throw new NotFoundError("Course not found.");
 
-  const enrollment = await db.enrollment.findUnique({
-    where: {
-      studentId_courseId: { studentId: principal.id, courseId: course.id },
-    },
-    select: { id: true, studentId: true, progressPercent: true, status: true },
-  });
-  if (!enrollment) throw new NotFoundError("You are not enrolled in this course.");
+  let enrollment;
+  try {
+    enrollment = await loadActiveEnrollmentForAuthz(principal.id, course.id);
+  } catch {
+    throw new NotFoundError("You are not enrolled in this course.");
+  }
   authorize(principal, {
     type: "enrollment:read",
     enrollment: { studentId: enrollment.studentId },

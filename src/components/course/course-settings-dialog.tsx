@@ -18,6 +18,7 @@ import {
 import {
   updateCourseAction,
   deleteCourseAction,
+  setCourseVisibilityAction,
 } from "@/app/(teach)/studio/actions";
 import { uploadFile } from "@/lib/upload-client";
 
@@ -35,6 +36,7 @@ export function CourseSettingsDialog({
     categoryId: string | null;
     completionThreshold: number;
     coverImageUrl: string | null;
+    visibility: "OPEN" | "RESTRICTED";
   };
   categories: Category[];
 }) {
@@ -53,6 +55,9 @@ export function CourseSettingsDialog({
   const [threshold, setThreshold] = useState(String(course.completionThreshold));
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(
     course.coverImageUrl,
+  );
+  const [visibility, setVisibility] = useState<"OPEN" | "RESTRICTED">(
+    course.visibility,
   );
 
   async function handleCover() {
@@ -87,10 +92,17 @@ export function CourseSettingsDialog({
       });
       if (res?.error) {
         setError(res.error);
-      } else {
-        setOpen(false);
-        router.refresh();
+        return;
       }
+      if (visibility !== course.visibility) {
+        const visRes = await setCourseVisibilityAction(course.id, visibility);
+        if (visRes?.error) {
+          setError(visRes.error);
+          return;
+        }
+      }
+      setOpen(false);
+      router.refresh();
     });
   }
 
@@ -245,6 +257,28 @@ export function CourseSettingsDialog({
                 onChange={(e) => setThreshold(e.target.value)}
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="cs-visibility">Visibility</Label>
+            <select
+              id="cs-visibility"
+              value={visibility}
+              onChange={(e) =>
+                setVisibility(e.target.value as "OPEN" | "RESTRICTED")
+              }
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="OPEN">Open — anyone can browse and enroll</option>
+              <option value="RESTRICTED">
+                Restricted — hidden from the catalog; only assigned students
+              </option>
+            </select>
+            <p className="text-xs text-muted-foreground">
+              Restricted courses never appear in search or the public
+              catalog. Use the &ldquo;Assign students&rdquo; button to grant
+              access once restricted.
+            </p>
           </div>
 
           {error && (

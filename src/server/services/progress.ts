@@ -6,6 +6,7 @@ import {
   firstIncompleteLessonId,
   type LessonRef,
 } from "@/server/services/progress-calc";
+import { loadActiveEnrollmentForAuthz } from "@/server/services/enrollment";
 
 /** Load the active (non-deleted) lessons of a course in curriculum order. */
 async function loadOrderedLessons(courseId: string): Promise<LessonRef[]> {
@@ -50,11 +51,10 @@ export async function markLessonComplete(
   if (!lesson) throw new NotFoundError("Lesson not found.");
   const courseId = lesson.module.courseId;
 
-  const enrollment = await db.enrollment.findUnique({
-    where: { studentId_courseId: { studentId: principal.id, courseId } },
-    select: { id: true, studentId: true },
-  });
-  if (!enrollment) {
+  let enrollment;
+  try {
+    enrollment = await loadActiveEnrollmentForAuthz(principal.id, courseId);
+  } catch {
     throw new AppError("You must enrol in this course first.", 403, "NOT_ENROLLED");
   }
   authorize(principal, {

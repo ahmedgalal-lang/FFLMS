@@ -20,12 +20,35 @@ const otherInstructor: Principal = {
 const student: Principal = { id: "stu1", role: "STUDENT", status: "ACTIVE" };
 const suspended: Principal = { id: "sus1", role: "INSTRUCTOR", status: "SUSPENDED" };
 
-const ownedDraft = { instructorId: "inst1", status: "DRAFT" as const };
-const ownedPublished = { instructorId: "inst1", status: "PUBLISHED" as const };
-const foreignDraft = { instructorId: "inst2", status: "DRAFT" as const };
+const ownedDraft = {
+  instructorId: "inst1",
+  status: "DRAFT" as const,
+  visibility: "OPEN" as const,
+};
+const ownedPublished = {
+  instructorId: "inst1",
+  status: "PUBLISHED" as const,
+  visibility: "OPEN" as const,
+};
+const foreignDraft = {
+  instructorId: "inst2",
+  status: "DRAFT" as const,
+  visibility: "OPEN" as const,
+};
 const foreignPublished = {
   instructorId: "inst2",
   status: "PUBLISHED" as const,
+  visibility: "OPEN" as const,
+};
+const ownedRestrictedPublished = {
+  instructorId: "inst1",
+  status: "PUBLISHED" as const,
+  visibility: "RESTRICTED" as const,
+};
+const foreignRestrictedPublished = {
+  instructorId: "inst2",
+  status: "PUBLISHED" as const,
+  visibility: "RESTRICTED" as const,
 };
 
 describe("authorize() — suspended accounts", () => {
@@ -106,8 +129,97 @@ describe("course:read visibility", () => {
   });
 });
 
+describe("course:read on a RESTRICTED course (specs/002-assign-courses)", () => {
+  it("owner and enrolled students may read; nobody else can, even though it's published", () => {
+    expect(
+      can(instructor, { type: "course:read", course: ownedRestrictedPublished }),
+    ).toBe(true);
+    expect(
+      can(student, {
+        type: "course:read",
+        course: ownedRestrictedPublished,
+        isEnrolled: true,
+      }),
+    ).toBe(true);
+    expect(
+      can(student, {
+        type: "course:read",
+        course: ownedRestrictedPublished,
+        isEnrolled: false,
+      }),
+    ).toBe(false);
+    expect(
+      can(otherInstructor, {
+        type: "course:read",
+        course: ownedRestrictedPublished,
+      }),
+    ).toBe(false);
+  });
+
+  it("admins may always read a RESTRICTED course", () => {
+    expect(
+      can(admin, { type: "course:read", course: foreignRestrictedPublished }),
+    ).toBe(true);
+  });
+});
+
+describe("course-assignment:manage / group:manage / course:visibility (specs/002-assign-courses)", () => {
+  it("only the owning instructor or an admin may manage course-access assignments", () => {
+    expect(
+      can(instructor, {
+        type: "course-assignment:manage",
+        course: ownedRestrictedPublished,
+      }),
+    ).toBe(true);
+    expect(
+      can(otherInstructor, {
+        type: "course-assignment:manage",
+        course: ownedRestrictedPublished,
+      }),
+    ).toBe(false);
+    expect(
+      can(admin, {
+        type: "course-assignment:manage",
+        course: foreignRestrictedPublished,
+      }),
+    ).toBe(true);
+    expect(
+      can(student, {
+        type: "course-assignment:manage",
+        course: ownedRestrictedPublished,
+      }),
+    ).toBe(false);
+  });
+
+  it("only the owning instructor or an admin may toggle course visibility", () => {
+    expect(
+      can(instructor, { type: "course:visibility", course: ownedDraft }),
+    ).toBe(true);
+    expect(
+      can(otherInstructor, { type: "course:visibility", course: ownedDraft }),
+    ).toBe(false);
+    expect(can(admin, { type: "course:visibility", course: foreignDraft })).toBe(
+      true,
+    );
+  });
+
+  it("only the owning instructor or an admin may manage a group", () => {
+    const ownedGroup = { ownerId: "inst1" };
+    expect(can(instructor, { type: "group:manage", group: ownedGroup })).toBe(
+      true,
+    );
+    expect(
+      can(otherInstructor, { type: "group:manage", group: ownedGroup }),
+    ).toBe(false);
+    expect(can(admin, { type: "group:manage", group: ownedGroup })).toBe(true);
+    expect(can(student, { type: "group:manage", group: ownedGroup })).toBe(
+      false,
+    );
+  });
+});
+
 describe("enrollment & learning ownership", () => {
-  it("only students may enroll, and only in published courses", () => {
+  it("only students may enroll, and only in published, OPEN courses", () => {
     expect(
       can(student, { type: "enrollment:create", course: ownedPublished }),
     ).toBe(true);
@@ -116,6 +228,23 @@ describe("enrollment & learning ownership", () => {
     ).toBe(false);
     expect(
       can(instructor, { type: "enrollment:create", course: ownedPublished }),
+    ).toBe(false);
+  });
+
+  it("students cannot self-enroll in a RESTRICTED course — assignment is the only path in", () => {
+    expect(
+      can(student, {
+        type: "enrollment:create",
+        course: ownedRestrictedPublished,
+      }),
+    ).toBe(false);
+    // Even an admin acting through the self-service action is denied — the
+    // instructor/admin path is course-assignment:manage instead, not this.
+    expect(
+      can(admin, {
+        type: "enrollment:create",
+        course: ownedRestrictedPublished,
+      }),
     ).toBe(false);
   });
 

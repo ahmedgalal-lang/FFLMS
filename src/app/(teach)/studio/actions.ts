@@ -7,6 +7,7 @@ import {
   createCourse,
   updateCourse,
   deleteCourse,
+  setCourseVisibility,
 } from "@/server/services/course";
 import {
   addModule,
@@ -76,6 +77,20 @@ export async function updateCourseAction(
   const principal = await requirePrincipal();
   try {
     await updateCourse(principal, courseId, data);
+    revalidatePath(`/studio/${courseId}`);
+    return { ok: true };
+  } catch (err) {
+    return toState(err);
+  }
+}
+
+export async function setCourseVisibilityAction(
+  courseId: string,
+  visibility: "OPEN" | "RESTRICTED",
+): Promise<ActionState> {
+  const principal = await requirePrincipal();
+  try {
+    await setCourseVisibility(principal, courseId, visibility);
     revalidatePath(`/studio/${courseId}`);
     return { ok: true };
   } catch (err) {

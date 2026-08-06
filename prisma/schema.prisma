@@ -34,6 +34,15 @@ enum CourseStatus {
   ARCHIVED
 }
 
+/// OPEN: today's behavior — any student can browse and self-enroll.
+/// RESTRICTED: hidden from the public catalog/search; access only via a
+/// CourseAssignment (direct) or GroupCourseAssignment (via a Group the
+/// student belongs to). See specs/002-assign-courses/data-model.md.
+enum CourseVisibility {
+  OPEN
+  RESTRICTED
+}
+
 enum ContentType {
   VIDEO
   TEXT
@@ -110,6 +119,12 @@ model User {
   sessions        Session[]
   fileAssets      FileAsset[]
 
+  ownedGroups                    Group[]                  @relation("GroupOwner")
+  groupMemberships               GroupMembership[]        @relation("GroupMembershipStudent")
+  courseAssignmentsReceived      CourseAssignment[]        @relation("CourseAssignmentStudent")
+  courseAssignmentsGranted       CourseAssignment[]        @relation("CourseAssignmentGrantedBy")
+  groupCourseAssignmentsGranted  GroupCourseAssignment[]   @relation("GroupCourseAssignmentGrantedBy")
+
   @@index([role])
 }
 
@@ -147,7 +162,8 @@ model Course {
   summary              String
   description          String       @default("")
   coverImageUrl        String?
-  status               CourseStatus @default(DRAFT)
+  status               CourseStatus     @default(DRAFT)
+  visibility           CourseVisibility @default(OPEN)
   instructorId         String
   categoryId           String?
   isRequiredSequential Boolean      @default(false)
@@ -157,13 +173,15 @@ model Course {
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
 
-  instructor    User               @relation("CourseInstructor", fields: [instructorId], references: [id])
-  category      Category?          @relation(fields: [categoryId], references: [id])
-  modules       Module[]
-  enrollments   Enrollment[]
-  announcements Announcement[]
-  threads       DiscussionThread[]
-  certificates  Certificate[]
+  instructor        User                    @relation("CourseInstructor", fields: [instructorId], references: [id])
+  category          Category?               @relation(fields: [categoryId], references: [id])
+  modules           Module[]
+  enrollments       Enrollment[]
+  announcements     Announcement[]
+  threads           DiscussionThread[]
+  certificates      Certificate[]
+  directAssignments CourseAssignment[]
+  groupAssignments  GroupCourseAssignment[]
 
   @@index([status, categoryId])
   @@index([instructorId])
@@ -281,6 +299,83 @@ model LessonProgress {
 
   @@unique([enrollmentId, lessonId])
   @@index([lessonId])
+}
+
+// ---------- Course Assignment (specs/002-assign-courses) ----------
+//
+// NOTE: "CourseAssignment" here means a grant of course *access*, unrelated
+// to the existing coursework `Assignment` model above (a gradable lesson
+// type). Do not conflate the two.
+
+/// A named, reusable collection of students. Not tied to a single course —
+/// the same group can have multiple courses assigned to it over time.
+model Group {
+  id        String   @id @default(cuid())
+  name      String
+  ownerId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner             User                    @relation("GroupOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  memberships       GroupMembership[]
+  courseAssignments GroupCourseAssignment[]
+
+  @@index([ownerId])
+}
+
+/// A student's current membership in a group. Existence of the row *is* the
+/// membership; adding/removing one drives automatic Enrollment grant/revoke
+/// for every course currently assigned to the group.
+model GroupMembership {
+  id        String   @id @default(cuid())
+  groupId   String
+  studentId String
+  addedAt   DateTime @default(now())
+
+  group   Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  student User  @relation("GroupMembershipStudent", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, studentId])
+  @@index([studentId])
+}
+
+/// A direct grant of access from one course to one student, independent of
+/// any group. Re-assigning after a revoke clears revokedAt rather than
+/// inserting a second row (unique per course+student).
+model CourseAssignment {
+  id           String    @id @default(cuid())
+  courseId     String
+  studentId    String
+  assignedById String
+  createdAt    DateTime  @default(now())
+  revokedAt    DateTime?
+
+  course     Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  student    User   @relation("CourseAssignmentStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  assignedBy User   @relation("CourseAssignmentGrantedBy", fields: [assignedById], references: [id])
+
+  @@unique([courseId, studentId])
+  @@index([studentId])
+  @@index([courseId])
+}
+
+/// A grant of access from one course to an entire group. Combined with the
+/// group's current GroupMembership rows, this determines who currently has
+/// group-derived access to that course.
+model GroupCourseAssignment {
+  id           String    @id @default(cuid())
+  groupId      String
+  courseId     String
+  assignedById String
+  createdAt    DateTime  @default(now())
+  revokedAt    DateTime?
+
+  group      Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  course     Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  assignedBy User   @relation("GroupCourseAssignmentGrantedBy", fields: [assignedById], references: [id])
+
+  @@unique([groupId, courseId])
+  @@index([courseId])
 }
 
 // ---------- Assessments ----------

@@ -7,6 +7,7 @@ import {
   type StudentAnswer,
 } from "@/server/services/grading-calc";
 import { assertQuizReady } from "@/server/services/quiz";
+import { loadActiveEnrollmentForAuthz } from "@/server/services/enrollment";
 import { submitAttemptSchema, type SubmitAttemptInput } from "@/lib/validation";
 
 /** Load a quiz + the acting student's enrollment, authorizing an attempt. */
@@ -27,11 +28,10 @@ async function loadQuizForAttempt(principal: Principal, quizId: string) {
   if (!quiz) throw new NotFoundError("Quiz not found.");
   const courseId = quiz.lesson.module.courseId;
 
-  const enrollment = await db.enrollment.findUnique({
-    where: { studentId_courseId: { studentId: principal.id, courseId } },
-    select: { id: true, studentId: true },
-  });
-  if (!enrollment) {
+  let enrollment;
+  try {
+    enrollment = await loadActiveEnrollmentForAuthz(principal.id, courseId);
+  } catch {
     throw new AppError("Enrol in the course to take this quiz.", 403, "NOT_ENROLLED");
   }
   authorize(principal, {

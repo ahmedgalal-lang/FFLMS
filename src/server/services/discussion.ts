@@ -8,6 +8,7 @@ import {
   type PostCreateInput,
 } from "@/lib/validation";
 import { notify } from "@/server/services/notification";
+import { loadActiveEnrollmentForAuthz } from "@/server/services/enrollment";
 
 /**
  * Course discussions (FR-027). Only the course instructor and students with an
@@ -18,18 +19,20 @@ import { notify } from "@/server/services/notification";
 async function authorizeParticipation(principal: Principal, courseId: string) {
   const course = await db.course.findFirst({
     where: { id: courseId, deletedAt: null },
-    select: { id: true, instructorId: true, status: true },
+    select: { id: true, instructorId: true, status: true, visibility: true },
   });
   if (!course) throw new NotFoundError("Course not found.");
 
-  const enrollment = await db.enrollment.findUnique({
-    where: { studentId_courseId: { studentId: principal.id, courseId } },
-    select: { id: true },
-  });
+  let isEnrolled = true;
+  try {
+    await loadActiveEnrollmentForAuthz(principal.id, courseId);
+  } catch {
+    isEnrolled = false;
+  }
   authorize(principal, {
     type: "discussion:participate",
     course,
-    isEnrolled: enrollment != null,
+    isEnrolled,
   });
   return course;
 }

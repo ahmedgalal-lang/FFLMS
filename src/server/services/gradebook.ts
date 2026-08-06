@@ -2,6 +2,7 @@ import { db } from "@/server/db";
 import { authorize, type Principal } from "@/server/access/policy";
 import { NotFoundError } from "@/server/http";
 import { loadCourseForAuthz } from "@/server/services/course";
+import { loadActiveEnrollmentForAuthz } from "@/server/services/enrollment";
 
 /**
  * Per-course gradebook aggregation (FR-022). For each enrolled student it
@@ -180,11 +181,11 @@ export async function getGradebook(principal: Principal, courseId: string) {
 
 /** A single student's own grades across a course (their grades view). */
 export async function getMyGrades(principal: Principal, courseId: string) {
-  const enrollment = await db.enrollment.findUnique({
-    where: { studentId_courseId: { studentId: principal.id, courseId } },
-    select: { id: true },
-  });
-  if (!enrollment) throw new NotFoundError("You are not enrolled in this course.");
+  try {
+    await loadActiveEnrollmentForAuthz(principal.id, courseId);
+  } catch {
+    throw new NotFoundError("You are not enrolled in this course.");
+  }
 
   const [attempts, submissions] = await Promise.all([
     db.quizAttempt.findMany({

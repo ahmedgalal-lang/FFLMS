@@ -16,6 +16,7 @@ import {
   LineChart,
   MessageSquare,
   Loader2,
+  UserPlus,
 } from "lucide-react";
 import type {
   Course,
@@ -102,6 +103,9 @@ export function CourseBuilder({
           <Badge variant={isPublished ? "success" : "secondary"}>
             {course.status.toLowerCase().replace("_", " ")}
           </Badge>
+          {course.visibility === "RESTRICTED" && (
+            <Badge variant="warning">Restricted</Badge>
+          )}
           <CourseSettingsDialog
             course={{
               id: course.id,
@@ -111,9 +115,17 @@ export function CourseBuilder({
               categoryId: course.categoryId,
               completionThreshold: course.completionThreshold,
               coverImageUrl: course.coverImageUrl,
+              visibility: course.visibility,
             }}
             categories={categories}
           />
+          {course.visibility === "RESTRICTED" && (
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/studio/${course.id}/assign`}>
+                <UserPlus /> Assign students
+              </Link>
+            </Button>
+          )}
           <Button asChild variant="outline" size="sm">
             <Link href={`/studio/${course.id}/gradebook`}>
               <BarChart3 /> Gradebook

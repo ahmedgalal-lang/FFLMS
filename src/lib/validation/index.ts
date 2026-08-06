@@ -114,6 +114,33 @@ export const lessonCompleteSchema = z.object({
   lastPositionSec: z.number().int().min(0).optional(),
 });
 
+// ---------- Course assignment (specs/002-assign-courses) ----------
+// Grants of course *access* — unrelated to the coursework Assignment schemas
+// (assignmentCreateSchema etc.) further down this file.
+
+export const courseVisibilitySchema = z.object({
+  visibility: z.enum(["OPEN", "RESTRICTED"]),
+});
+
+export const courseAssignSchema = z.object({
+  courseId: z.string().cuid(),
+  studentId: z.string().cuid(),
+});
+
+export const groupCreateSchema = z.object({
+  name: z.string().min(2, "Name is too short").max(100),
+});
+
+export const groupMemberSchema = z.object({
+  groupId: z.string().cuid(),
+  studentId: z.string().cuid(),
+});
+
+export const groupAssignCourseSchema = z.object({
+  groupId: z.string().cuid(),
+  courseId: z.string().cuid(),
+});
+
 // ---------- Catalog ----------
 
 export const catalogQuerySchema = z.object({

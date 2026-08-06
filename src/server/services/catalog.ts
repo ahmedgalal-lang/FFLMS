@@ -12,6 +12,7 @@ import type { PageParams } from "@/server/http";
 export async function searchCatalog(query: CatalogQuery, page: PageParams) {
   const where: Prisma.CourseWhereInput = {
     status: "PUBLISHED",
+    visibility: "OPEN",
     deletedAt: null,
     ...(query.q
       ? {
@@ -48,10 +49,14 @@ export async function searchCatalog(query: CatalogQuery, page: PageParams) {
   return { items, total };
 }
 
-/** Full public detail for a published course by slug. */
+/**
+ * Full public detail for a published, OPEN course by slug. RESTRICTED courses
+ * are never reachable here, even by direct link — assigned students reach
+ * them via My Learning / the player instead (specs/002-assign-courses).
+ */
 export async function getPublicCourse(slug: string) {
   return db.course.findFirst({
-    where: { slug, status: "PUBLISHED", deletedAt: null },
+    where: { slug, status: "PUBLISHED", visibility: "OPEN", deletedAt: null },
     include: {
       instructor: { select: { name: true, avatarUrl: true } },
       category: true,

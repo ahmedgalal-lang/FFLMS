@@ -2,6 +2,7 @@ import { db } from "@/server/db";
 import { authorize, type Principal } from "@/server/access/policy";
 import { NotFoundError, AppError } from "@/server/http";
 import { loadCourseForAuthz } from "@/server/services/course";
+import { loadActiveEnrollmentForAuthz } from "@/server/services/enrollment";
 import {
   submissionInputSchema,
   gradeSubmissionSchema,
@@ -35,11 +36,10 @@ export async function submitAssignment(
   if (!assignment) throw new NotFoundError("Assignment not found.");
   const courseId = assignment.lesson.module.courseId;
 
-  const enrollment = await db.enrollment.findUnique({
-    where: { studentId_courseId: { studentId: principal.id, courseId } },
-    select: { id: true, studentId: true },
-  });
-  if (!enrollment) {
+  let enrollment;
+  try {
+    enrollment = await loadActiveEnrollmentForAuthz(principal.id, courseId);
+  } catch {
     throw new AppError("Enrol in the course to submit this assignment.", 403, "NOT_ENROLLED");
   }
   authorize(principal, {

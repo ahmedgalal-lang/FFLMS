@@ -1,6 +1,7 @@
 import { db } from "@/server/db";
 import { authorize, type Principal } from "@/server/access/policy";
 import { NotFoundError } from "@/server/http";
+import { loadActiveEnrollmentForAuthz } from "@/server/services/enrollment";
 
 /**
  * Persist a learner's video playback state for a lesson: the resume position
@@ -18,16 +19,15 @@ export async function saveVideoProgress(
   });
   if (!lesson) throw new NotFoundError("Lesson not found.");
 
-  const enrollment = await db.enrollment.findUnique({
-    where: {
-      studentId_courseId: {
-        studentId: principal.id,
-        courseId: lesson.module.courseId,
-      },
-    },
-    select: { id: true, studentId: true },
-  });
-  if (!enrollment) throw new NotFoundError("You are not enrolled in this course.");
+  let enrollment;
+  try {
+    enrollment = await loadActiveEnrollmentForAuthz(
+      principal.id,
+      lesson.module.courseId,
+    );
+  } catch {
+    throw new NotFoundError("You are not enrolled in this course.");
+  }
   authorize(principal, {
     type: "enrollment:read",
     enrollment: { studentId: enrollment.studentId },

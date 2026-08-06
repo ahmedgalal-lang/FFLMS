@@ -40,10 +40,31 @@ export async function getEnrollment(principal: Principal, courseId: string) {
   });
 }
 
+/**
+ * Load a student's enrollment for a course, treating a revoked
+ * (CANCELLED — see specs/002-assign-courses) enrollment as not found. This is
+ * the shared ownership-check loader every learning feature (attempts,
+ * submissions, video progress, discussions, gradebook, the player) should use
+ * instead of a raw `db.enrollment.findUnique`, so a course-assignment revoke
+ * actually blocks continued access everywhere, not just in My Learning.
+ */
+export async function loadActiveEnrollmentForAuthz(
+  studentId: string,
+  courseId: string,
+) {
+  const enrollment = await db.enrollment.findUnique({
+    where: { studentId_courseId: { studentId, courseId } },
+  });
+  if (!enrollment || enrollment.status === "CANCELLED") {
+    throw new NotFoundError("Enrollment not found.");
+  }
+  return enrollment;
+}
+
 /** "My Learning" — the student's enrollments with course + progress. */
 export async function listMyEnrollments(principal: Principal) {
   return db.enrollment.findMany({
-    where: { studentId: principal.id },
+    where: { studentId: principal.id, status: { not: "CANCELLED" } },
     orderBy: { enrolledAt: "desc" },
     include: {
       course: {

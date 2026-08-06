@@ -13,7 +13,7 @@ import { slugify } from "@/lib/utils";
 export async function loadCourseForAuthz(courseId: string) {
   const course = await db.course.findFirst({
     where: { id: courseId, deletedAt: null },
-    select: { id: true, instructorId: true, status: true },
+    select: { id: true, instructorId: true, status: true, visibility: true },
   });
   if (!course) throw new NotFoundError("Course not found.");
   return course;
@@ -106,6 +106,24 @@ export async function updateCourse(
         ? { isRequiredSequential: data.isRequiredSequential }
         : {}),
     },
+  });
+}
+
+/**
+ * Toggle a course between Open (self-enrollable, today's behavior) and
+ * Restricted (assignment-only) — specs/002-assign-courses FR-012, FR-018.
+ * Does not touch any existing Enrollment either direction.
+ */
+export async function setCourseVisibility(
+  principal: Principal,
+  courseId: string,
+  visibility: "OPEN" | "RESTRICTED",
+) {
+  const course = await loadCourseForAuthz(courseId);
+  authorize(principal, { type: "course:visibility", course });
+  return db.course.update({
+    where: { id: courseId },
+    data: { visibility },
   });
 }
 

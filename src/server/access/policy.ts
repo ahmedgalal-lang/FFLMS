@@ -1,4 +1,4 @@
-import type { Role, UserStatus, CourseStatus } from "@prisma/client";
+import type { Role, UserStatus, CourseStatus, CourseVisibility } from "@prisma/client";
 
 /**
  * Central authorization policy (Constitution Principle V).
@@ -26,10 +26,15 @@ export class AuthorizationError extends Error {
 export type CourseResource = {
   instructorId: string;
   status: CourseStatus;
+  visibility: CourseVisibility;
 };
 
 export type EnrollmentResource = {
   studentId: string;
+};
+
+export type GroupResource = {
+  ownerId: string;
 };
 
 export type Action =
@@ -41,10 +46,16 @@ export type Action =
   | { type: "course:publish"; course: CourseResource }
   // Curriculum (modules/lessons/content) — gated by the owning course
   | { type: "curriculum:edit"; course: CourseResource }
+  | { type: "course:visibility"; course: CourseResource }
   // Enrollment & learning
   | { type: "enrollment:create"; course: CourseResource }
   | { type: "enrollment:read"; enrollment: EnrollmentResource }
   | { type: "lesson:complete"; enrollment: EnrollmentResource }
+  // Course-access assignment (specs/002-assign-courses) — grants of access to
+  // a RESTRICTED course, direct or via a Group. Unrelated to "assignment:manage"
+  // below, which is the coursework Assignment (gradable lesson) type.
+  | { type: "course-assignment:manage"; course: CourseResource }
+  | { type: "group:manage"; group: GroupResource }
   // Assessments
   | { type: "quiz:manage"; course: CourseResource }
   | { type: "quiz:attempt"; enrollment: EnrollmentResource }
@@ -66,6 +77,8 @@ const owns = (p: Principal, course: CourseResource) =>
   p.role === "INSTRUCTOR" && course.instructorId === p.id;
 const ownsEnrollment = (p: Principal, e: EnrollmentResource) =>
   e.studentId === p.id;
+const ownsGroup = (p: Principal, group: GroupResource) =>
+  p.role === "INSTRUCTOR" && group.ownerId === p.id;
 
 /**
  * Decide whether `principal` may perform `action`. Pure and side-effect free.
@@ -92,19 +105,26 @@ export function can(principal: Principal, action: Action): boolean {
       return principal.role === "INSTRUCTOR";
 
     case "course:read":
-      if (action.course.status === "PUBLISHED") return true;
+      if (action.course.status === "PUBLISHED" && action.course.visibility === "OPEN") {
+        return true;
+      }
       return owns(principal, action.course) || action.isEnrolled === true;
 
     case "course:update":
     case "course:delete":
     case "course:publish":
+    case "course:visibility":
     case "curriculum:edit":
     case "quiz:manage":
     case "assignment:manage":
     case "assignment:grade":
     case "gradebook:read":
     case "announcement:create":
+    case "course-assignment:manage":
       return owns(principal, action.course);
+
+    case "group:manage":
+      return ownsGroup(principal, action.group);
 
     case "discussion:participate":
       // The course instructor, or any student with an active enrollment.
@@ -112,7 +132,9 @@ export function can(principal: Principal, action: Action): boolean {
 
     case "enrollment:create":
       return (
-        principal.role === "STUDENT" && action.course.status === "PUBLISHED"
+        principal.role === "STUDENT" &&
+        action.course.status === "PUBLISHED" &&
+        action.course.visibility === "OPEN"
       );
 
     case "enrollment:read":
