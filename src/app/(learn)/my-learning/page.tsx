@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { GraduationCap, Award } from "lucide-react";
+import { GraduationCap, Award, BookOpen } from "lucide-react";
 import { requirePrincipal } from "@/server/auth";
 import { listMyEnrollments } from "@/server/services/enrollment";
 import { Progress } from "@/components/ui/progress";
@@ -13,9 +13,33 @@ export default async function MyLearningPage() {
   const principal = await requirePrincipal();
   const enrollments = await listMyEnrollments(principal);
 
+  const completed = enrollments.filter((e) => e.status === "COMPLETED").length;
+  const inProgress = enrollments.filter(
+    (e) => e.status !== "COMPLETED" && e.progressPercent > 0,
+  ).length;
+  const stats = [
+    { label: "Enrolled courses", value: enrollments.length, icon: BookOpen },
+    { label: "In progress", value: inProgress, icon: GraduationCap },
+    { label: "Completed", value: completed, icon: Award },
+  ];
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">My Learning</h1>
+
+      {enrollments.length > 0 && (
+        <div className="grid gap-4 sm:grid-cols-3">
+          {stats.map(({ label, value, icon: Icon }) => (
+            <div key={label} className="rounded-lg border bg-card p-5">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">{label}</span>
+                <Icon className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <p className="mt-2 text-3xl font-bold tabular-nums">{value}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {enrollments.length === 0 ? (
         <div className="rounded-lg border border-dashed p-12 text-center">

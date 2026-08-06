@@ -21,7 +21,10 @@ export async function SiteHeader() {
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
       <div className="container flex h-16 items-center justify-between gap-4">
         <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center gap-2 font-semibold">
+          <Link
+            href={user ? "/dashboard" : "/"}
+            className="flex items-center gap-2 font-semibold"
+          >
             <GraduationCap className="h-6 w-6 text-primary" />
             <span className="hidden sm:inline">LMS Platform</span>
           </Link>
