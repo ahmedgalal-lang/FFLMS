@@ -1,0 +1,31 @@
+"use client";
+
+import { createContext, useContext, useEffect, useState } from "react";
+
+const STORAGE_KEY = "lms-sidebar-collapsed";
+
+const SidebarContext = createContext<{ collapsed: boolean; toggle: () => void } | null>(null);
+
+export function SidebarProvider({ children }: { children: React.ReactNode }) {
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    setCollapsed(window.localStorage.getItem(STORAGE_KEY) === "1");
+  }, []);
+
+  function toggle() {
+    setCollapsed((prev) => {
+      const next = !prev;
+      window.localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
+      return next;
+    });
+  }
+
+  return <SidebarContext.Provider value={{ collapsed, toggle }}>{children}</SidebarContext.Provider>;
+}
+
+export function useSidebar() {
+  const ctx = useContext(SidebarContext);
+  if (!ctx) throw new Error("useSidebar must be used within a SidebarProvider");
+  return ctx;
+}

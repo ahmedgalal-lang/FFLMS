@@ -2,30 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import { BookOpen, GraduationCap, LayoutGrid, ShieldCheck, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { BookOpen, GraduationCap, LayoutGrid, ShieldCheck } from "lucide-react";
 import type { Role } from "@prisma/client";
+import { useSidebar } from "@/components/layout/sidebar-context";
 import { cn } from "@/lib/utils";
-
-const STORAGE_KEY = "lms-sidebar-collapsed";
 
 type NavItem = { href: string; label: string; icon: typeof BookOpen };
 
 export function SidebarNav({ role }: { role: Role }) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
-
-  useEffect(() => {
-    setCollapsed(window.localStorage.getItem(STORAGE_KEY) === "1");
-  }, []);
-
-  function toggle() {
-    setCollapsed((prev) => {
-      const next = !prev;
-      window.localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
-      return next;
-    });
-  }
+  const { collapsed } = useSidebar();
 
   const items: NavItem[] = [
     { href: "/courses", label: "Catalog", icon: BookOpen },
@@ -66,20 +52,6 @@ export function SidebarNav({ role }: { role: Role }) {
           );
         })}
       </nav>
-      <button
-        type="button"
-        onClick={toggle}
-        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        className="flex items-center justify-center gap-2 border-t p-3 text-xs font-medium text-muted-foreground hover:text-foreground"
-      >
-        {collapsed ? (
-          <ChevronsRight className="h-4 w-4" />
-        ) : (
-          <>
-            <ChevronsLeft className="h-4 w-4" /> Collapse
-          </>
-        )}
-      </button>
     </aside>
   );
 }

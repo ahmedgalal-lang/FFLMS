@@ -3,6 +3,7 @@ import { GraduationCap, Bell } from "lucide-react";
 import type { Role } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { UserMenu } from "@/components/layout/user-menu";
+import { SidebarToggle } from "@/components/layout/sidebar-toggle";
 
 type HeaderUser = {
   name: string;
@@ -16,13 +17,16 @@ export function SiteHeader({ user, unread }: { user: HeaderUser; unread: number 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
       <div className="container flex h-16 items-center justify-between gap-4">
-        <Link
-          href={user ? "/dashboard" : "/"}
-          className="flex items-center gap-2 font-semibold"
-        >
-          <GraduationCap className="h-6 w-6 text-primary" />
-          <span className="hidden sm:inline">LMS Platform</span>
-        </Link>
+        <div className="flex items-center gap-1">
+          {user && <SidebarToggle />}
+          <Link
+            href={user ? "/dashboard" : "/"}
+            className="flex items-center gap-2 font-semibold"
+          >
+            <GraduationCap className="h-6 w-6 text-primary" />
+            <span className="hidden sm:inline">LMS Platform</span>
+          </Link>
+        </div>
 
         {user ? (
           <div className="flex items-center gap-2">
