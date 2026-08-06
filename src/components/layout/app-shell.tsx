@@ -1,7 +1,22 @@
 import Link from "next/link";
 import { SiteHeader } from "@/components/layout/site-header";
+import { SidebarNav } from "@/components/layout/sidebar-nav";
+import { getPrincipal } from "@/server/auth";
+import { db } from "@/server/db";
+import { unreadCount } from "@/server/services/notification";
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export async function AppShell({ children }: { children: React.ReactNode }) {
+  const principal = await getPrincipal();
+  const [user, unread] = await Promise.all([
+    principal
+      ? db.user.findUnique({
+          where: { id: principal.id },
+          select: { name: true, email: true, role: true, avatarUrl: true },
+        })
+      : Promise.resolve(null),
+    principal ? unreadCount(principal) : Promise.resolve(0),
+  ]);
+
   return (
     <div className="flex min-h-screen flex-col">
       <a
@@ -10,10 +25,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       >
         Skip to content
       </a>
-      <SiteHeader />
-      <main id="main" className="container flex-1 py-8">
-        {children}
-      </main>
+      <SiteHeader user={user} unread={unread} />
+      <div className="flex flex-1">
+        {user && <SidebarNav role={user.role} />}
+        <main id="main" className="container flex-1 py-8">
+          {children}
+        </main>
+      </div>
       <footer className="border-t py-6 text-center text-sm text-muted-foreground">
         LMS Platform · Built with Next.js ·{" "}
         <Link href="/verify" className="hover:text-foreground hover:underline">

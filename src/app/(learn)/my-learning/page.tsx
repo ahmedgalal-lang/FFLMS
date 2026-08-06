@@ -4,6 +4,8 @@ import { GraduationCap, Award, BookOpen, ArrowRight, Flame } from "lucide-react"
 import { requirePrincipal } from "@/server/auth";
 import { db } from "@/server/db";
 import { listMyEnrollments } from "@/server/services/enrollment";
+import { searchCatalog } from "@/server/services/catalog";
+import { CourseCard } from "@/components/course/course-card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,6 +24,11 @@ export default async function MyLearningPage() {
     db.user.findUnique({ where: { id: principal.id }, select: { name: true } }),
     listMyEnrollments(principal),
   ]);
+
+  const suggestions =
+    enrollments.length === 0
+      ? (await searchCatalog({ page: 1 }, { page: 1, pageSize: 3, skip: 0 })).items
+      : [];
 
   const completed = enrollments.filter((e) => e.status === "COMPLETED").length;
   const active = enrollments
@@ -77,9 +84,8 @@ export default async function MyLearningPage() {
         <p className="mt-1 text-muted-foreground">{subtitle}</p>
       </div>
 
-      {enrollments.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-3">
-          {stats.map(({ label, value, icon: Icon, badge }) => (
+      <div className="grid gap-4 sm:grid-cols-3">
+        {stats.map(({ label, value, icon: Icon, badge }) => (
             <div key={label} className="rounded-lg border bg-card p-5">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">{label}</span>
@@ -91,9 +97,8 @@ export default async function MyLearningPage() {
               </div>
               <p className="mt-2 text-3xl font-bold tabular-nums">{value}</p>
             </div>
-          ))}
-        </div>
-      )}
+        ))}
+      </div>
 
       {featured && (
         <div className="overflow-hidden rounded-xl border bg-card">
@@ -144,14 +149,31 @@ export default async function MyLearningPage() {
       )}
 
       {enrollments.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-12 text-center">
-          <GraduationCap className="mx-auto h-10 w-10 text-muted-foreground" />
-          <p className="mt-3 text-muted-foreground">
-            You haven&apos;t enrolled in any courses yet.
-          </p>
-          <Button asChild className="mt-4">
-            <Link href="/courses">Browse the catalog</Link>
-          </Button>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-medium text-muted-foreground">
+              Get started
+            </h2>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/courses">
+                Browse full catalog <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+          {suggestions.length > 0 ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {suggestions.map((course) => (
+                <CourseCard key={course.id} course={course} />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed p-12 text-center">
+              <GraduationCap className="mx-auto h-10 w-10 text-muted-foreground" />
+              <p className="mt-3 text-muted-foreground">
+                No published courses yet — check back soon.
+              </p>
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-3">
