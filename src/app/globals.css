@@ -2,46 +2,65 @@
 @tailwind components;
 @tailwind utilities;
 
+/**
+ * ForeFront brand palette (specs/002-assign-courses' course covers use the
+ * same source hexes — keep these in sync if the guideline changes):
+ *   Midnight Blue #0F2C69  -> hsl(221 75% 24%)  primary, 70% of the palette
+ *   Supernova Orange #F6AE2D -> hsl(38 92% 57%) accent/ring, ~10% — used
+ *     sparingly (focus rings, warning badges, small highlights), never as a
+ *     blanket hover fill
+ *   Dark Navy #1A1A39      -> hsl(240 37% 16%)  ~20%, dark-mode surface +
+ *     tints the neutral grays (secondary/muted/border) instead of default
+ *     slate, so even "gray" UI reads as on-brand
+ */
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 221 40% 12%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --card-foreground: 221 40% 12%;
+    --primary: 221 75% 24%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 221 25% 95%;
+    --secondary-foreground: 221 40% 16%;
+    --muted: 221 20% 95.5%;
+    --muted-foreground: 221 12% 42%;
+    --accent: 221 25% 94%;
+    --accent-foreground: 221 40% 16%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --border: 221 20% 89%;
+    --input: 221 20% 89%;
+    --ring: 38 92% 57%;
     --radius: 0.5rem;
+
+    /* Brand accents for deliberate, non-semantic highlights (dashboard
+       cards, illustrative fills) — not wired into shadcn's role tokens
+       above so they stay intentional rather than blanket-applied. */
+    --brand-orange: 38 92% 57%;
+    --brand-navy: 240 37% 16%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --background: 240 37% 10%;
+    --foreground: 0 0% 98%;
+    --card: 240 33% 14%;
+    --card-foreground: 0 0% 98%;
+    --primary: 221 70% 60%;
+    --primary-foreground: 240 37% 10%;
+    --secondary: 240 25% 20%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 25% 20%;
+    --muted-foreground: 221 15% 68%;
+    --accent: 240 25% 22%;
+    --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --border: 240 25% 22%;
+    --input: 240 25% 22%;
+    --ring: 38 92% 57%;
+    --brand-orange: 38 92% 57%;
+    --brand-navy: 240 37% 16%;
   }
 }
 
