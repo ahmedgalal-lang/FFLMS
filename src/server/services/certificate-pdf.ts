@@ -62,8 +62,11 @@ export async function renderCertificatePdf(params: {
   try {
     doc.registerFontkit(fontkit);
     const fonts = loadFonts();
-    body = await doc.embedFont(fonts.regular, { subset: true });
-    heading = await doc.embedFont(fonts.bold, { subset: true });
+    // subset: true corrupts most non-repeating Latin/Arabic glyphs for this
+    // font under pdf-lib's subsetter — embed the full font instead (a few
+    // hundred KB is a non-issue for a one-off certificate download).
+    body = await doc.embedFont(fonts.regular, { subset: false });
+    heading = await doc.embedFont(fonts.bold, { subset: false });
   } catch {
     unicode = false;
     body = await doc.embedFont(StandardFonts.TimesRoman);

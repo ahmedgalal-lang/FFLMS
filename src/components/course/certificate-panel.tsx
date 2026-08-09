@@ -82,7 +82,7 @@ export function CertificatePanel({
                 </p>
               </div>
               <Button
-                variant={c.revokedAt ? "outline" : "ghost"}
+                variant={c.revokedAt ? "outline" : "destructive"}
                 size="sm"
                 disabled={pending}
                 onClick={() => toggle(c)}
