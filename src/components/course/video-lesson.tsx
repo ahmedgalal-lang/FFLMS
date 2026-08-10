@@ -41,6 +41,7 @@ export function VideoLesson({
   initialWatchedSec,
   questions,
   onWatched,
+  onEnded,
 }: {
   lessonId: string;
   src: string;
@@ -50,6 +51,8 @@ export function VideoLesson({
   questions: CueQuestion[];
   /** Report (watchedSec, durationSec) up so the parent can gate advancement. */
   onWatched: (watchedSec: number, durationSec: number) => void;
+  /** Fired once when playback reaches the end of the video. */
+  onEnded?: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const mountRef = useRef<HTMLDivElement>(null);
@@ -59,6 +62,12 @@ export function VideoLesson({
   const answeredRef = useRef<Set<string>>(new Set());
   const activeCueRef = useRef<CueQuestion | null>(null);
   const resumeRef = useRef<() => void>(() => {});
+  const endedFiredRef = useRef(false);
+  const fireEnded = useCallback(() => {
+    if (endedFiredRef.current) return;
+    endedFiredRef.current = true;
+    onEnded?.();
+  }, [onEnded]);
   const [activeCue, setActiveCue] = useState<CueQuestion | null>(null);
 
   const sortedQuestions = [...questions].sort((a, b) => a.atSec - b.atSec);
@@ -139,13 +148,15 @@ export function VideoLesson({
             onWatched(watchedRef.current, player?.getDuration?.() ?? 0);
             poll = setInterval(() => {
               if (!player) return;
-              const playing = player.getPlayerState() === 1; // YT.PlayerState.PLAYING
+              const state = player.getPlayerState();
+              const playing = state === 1; // YT.PlayerState.PLAYING
               processTick(
                 player.getCurrentTime(),
                 player.getDuration(),
                 playing,
                 () => player?.pauseVideo(),
               );
+              if (state === 0) fireEnded(); // YT.PlayerState.ENDED
             }, 500);
           },
         },
@@ -181,6 +192,7 @@ export function VideoLesson({
       player.on("timeupdate", (d: { seconds: number; duration: number }) => {
         processTick(d.seconds, d.duration, true, () => void player?.pause());
       });
+      player.on("ended", () => fireEnded());
     });
 
     return () => {
@@ -230,7 +242,10 @@ export function VideoLesson({
             processTick(v.currentTime, v.duration, !v.paused, () => v.pause());
           }}
           onPause={(e) => save(e.currentTarget.currentTime)}
-          onEnded={(e) => save(e.currentTarget.currentTime)}
+          onEnded={(e) => {
+            save(e.currentTarget.currentTime);
+            fireEnded();
+          }}
         >
           Your browser does not support embedded video.
         </video>

@@ -255,6 +255,9 @@ export function CoursePlayer({
                               )
                           : () => {}
                       }
+                      onEnded={
+                        isGate && !isCurrentComplete ? markComplete : undefined
+                      }
                     />
                   );
                 }

@@ -18,6 +18,8 @@ import {
   Loader2,
   UserPlus,
   Award,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import type {
   Course,
@@ -75,7 +77,12 @@ export function CourseBuilder({
   const [pending, startTransition] = useTransition();
   const [newModule, setNewModule] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const isPublished = course.status === "PUBLISHED";
+
+  function toggleModule(moduleId: string) {
+    setCollapsed((prev) => ({ ...prev, [moduleId]: !prev[moduleId] }));
+  }
 
   function run(fn: () => Promise<{ error?: string } | undefined | void>) {
     setError(null);
@@ -206,13 +213,33 @@ export function CourseBuilder({
 
       {/* Modules */}
       <div className="space-y-4">
-        {course.modules.map((mod, mi) => (
+        {course.modules.map((mod, mi) => {
+          const isCollapsed = collapsed[mod.id];
+          return (
           <div key={mod.id} className="rounded-lg border bg-card">
             <div className="flex items-center justify-between border-b p-4">
-              <h2 className="font-semibold">
-                <span className="text-muted-foreground">Module {mi + 1}:</span>{" "}
-                {mod.title}
-              </h2>
+              <button
+                type="button"
+                className="flex min-w-0 items-center gap-2 text-left font-semibold"
+                onClick={() => toggleModule(mod.id)}
+                aria-expanded={!isCollapsed}
+                aria-label={`${isCollapsed ? "Expand" : "Collapse"} module ${mod.title}`}
+              >
+                {isCollapsed ? (
+                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                )}
+                <span className="truncate">
+                  <span className="text-muted-foreground">Module {mi + 1}:</span>{" "}
+                  {mod.title}
+                </span>
+                {isCollapsed && (
+                  <span className="shrink-0 text-xs font-normal text-muted-foreground">
+                    ({mod.lessons.length} lesson{mod.lessons.length === 1 ? "" : "s"})
+                  </span>
+                )}
+              </button>
               <Button
                 variant="ghost"
                 size="icon"
@@ -224,6 +251,7 @@ export function CourseBuilder({
               </Button>
             </div>
 
+            {!isCollapsed && (
             <div className="divide-y">
               {mod.lessons.map((lesson, li) => (
                 <div key={lesson.id} className="p-4">
@@ -322,8 +350,10 @@ export function CourseBuilder({
                 }
               />
             </div>
+            )}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Add module */}
