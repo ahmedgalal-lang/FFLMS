@@ -11,6 +11,8 @@ import {
   Award,
   MessageSquare,
   Loader2,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import type { ContentBlock } from "@prisma/client";
 import { isEmbedVideo, videoProvider } from "@/lib/video";
@@ -88,6 +90,11 @@ export function CoursePlayer({
   const [progress, setProgress] = useState(progressPercent);
   const [error, setError] = useState<string | null>(null);
   const [watchedPct, setWatchedPct] = useState(0);
+  const [collapsedModules, setCollapsedModules] = useState<Record<string, boolean>>({});
+
+  function toggleModule(moduleId: string) {
+    setCollapsedModules((prev) => ({ ...prev, [moduleId]: !prev[moduleId] }));
+  }
 
   // The first controllable video block (file / YouTube / Vimeo — not an
   // uncontrolled embed like Drive) gates advancement.
@@ -170,40 +177,62 @@ export function CoursePlayer({
           </Link>
         </div>
 
-        <nav className="space-y-4">
-          {course.modules.map((mod, mi) => (
-            <div key={mod.id}>
-              <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {mi + 1}. {mod.title}
-              </p>
-              <ul className="space-y-0.5">
-                {mod.lessons.map((lesson) => {
-                  const done = completed.has(lesson.id);
-                  const active = currentLesson?.id === lesson.id;
-                  return (
-                    <li key={lesson.id}>
-                      <Link
-                        href={`/learn/${slug}?lesson=${lesson.id}`}
-                        className={cn(
-                          "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm",
-                          active
-                            ? "bg-primary/10 font-medium text-primary"
-                            : "hover:bg-muted",
-                        )}
-                      >
-                        {done ? (
-                          <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
-                        ) : (
-                          <Circle className="h-4 w-4 shrink-0 text-muted-foreground" />
-                        )}
-                        <span className="line-clamp-2">{lesson.title}</span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ))}
+        <nav className="space-y-3">
+          {course.modules.map((mod, mi) => {
+            const moduleCollapsed = collapsedModules[mod.id];
+            const doneCount = mod.lessons.filter((l) => completed.has(l.id)).length;
+            return (
+              <div key={mod.id}>
+                <button
+                  type="button"
+                  className="mb-1 flex w-full items-center gap-1 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground"
+                  onClick={() => toggleModule(mod.id)}
+                  aria-expanded={!moduleCollapsed}
+                  aria-label={`${moduleCollapsed ? "Expand" : "Collapse"} module ${mod.title}`}
+                >
+                  {moduleCollapsed ? (
+                    <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+                  ) : (
+                    <ChevronDown className="h-3.5 w-3.5 shrink-0" />
+                  )}
+                  <span className="truncate">
+                    {mi + 1}. {mod.title}
+                  </span>
+                  <span className="ml-auto shrink-0 normal-case tabular-nums">
+                    {doneCount}/{mod.lessons.length}
+                  </span>
+                </button>
+                {!moduleCollapsed && (
+                  <ul className="space-y-0.5">
+                    {mod.lessons.map((lesson) => {
+                      const done = completed.has(lesson.id);
+                      const active = currentLesson?.id === lesson.id;
+                      return (
+                        <li key={lesson.id}>
+                          <Link
+                            href={`/learn/${slug}?lesson=${lesson.id}`}
+                            className={cn(
+                              "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm",
+                              active
+                                ? "bg-primary/10 font-medium text-primary"
+                                : "hover:bg-muted",
+                            )}
+                          >
+                            {done ? (
+                              <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
+                            ) : (
+                              <Circle className="h-4 w-4 shrink-0 text-muted-foreground" />
+                            )}
+                            <span className="line-clamp-2">{lesson.title}</span>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            );
+          })}
         </nav>
       </aside>
 
