@@ -7,6 +7,7 @@ import {
   listUsers,
   changeUserRole,
   setUserStatus,
+  deleteUser,
 } from "@/server/services/admin";
 import {
   submitForReview,
@@ -87,6 +88,40 @@ describe("admin user management (US6, FR-003/033)", () => {
   it("prevents an admin from locking themselves out", async () => {
     await expect(changeUserRole(admin, admin.id, "STUDENT")).rejects.toBeInstanceOf(AppError);
     await expect(setUserStatus(admin, admin.id, "SUSPENDED")).rejects.toBeInstanceOf(AppError);
+  });
+
+  it("refuses to delete an instructor who still owns courses", async () => {
+    await expect(deleteUser(admin, instructor.id)).rejects.toThrow(/still owns courses/);
+  });
+
+  it("refuses self-deletion", async () => {
+    await expect(deleteUser(admin, admin.id)).rejects.toBeInstanceOf(AppError);
+  });
+
+  it("only admins may delete users", async () => {
+    const suffix = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+    const victim = await db.user.create({
+      data: { email: `del-${suffix}@t.test`, name: "Deletable", role: "STUDENT" },
+    });
+    await expect(
+      deleteUser({ id: instructor.id, role: "INSTRUCTOR", status: "ACTIVE" }, victim.id),
+    ).rejects.toBeInstanceOf(AuthorizationError);
+    await db.user.delete({ where: { id: victim.id } });
+  });
+
+  it("deletes a user with no authored courses and audits it", async () => {
+    const suffix = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+    const victim = await db.user.create({
+      data: { email: `del2-${suffix}@t.test`, name: "Deletable Two", role: "STUDENT" },
+    });
+    await deleteUser(admin, victim.id);
+    const found = await db.user.findUnique({ where: { id: victim.id } });
+    expect(found).toBeNull();
+    const log = await db.auditLog.findFirst({
+      where: { action: "USER_DELETED", targetId: victim.id },
+    });
+    expect(log).not.toBeNull();
+    expect((log?.metadata as { email?: string })?.email).toBe(victim.email);
   });
 });
 

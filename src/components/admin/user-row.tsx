@@ -3,6 +3,7 @@
 import { useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Role, UserStatus } from "@prisma/client";
+import { Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +11,7 @@ import {
   setStatusAction,
   updateUserInfoAction,
   setUserPasswordAction,
+  deleteUserAction,
 } from "@/app/(admin)/admin/actions";
 
 type AdminUser = {
@@ -150,6 +152,25 @@ export function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) 
               Reset password
             </Button>
           )}
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={pending || isSelf || user._count.coursesAuthored > 0}
+            title={
+              user._count.coursesAuthored > 0
+                ? "This user still owns courses — reassign or delete those first."
+                : undefined
+            }
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            onClick={() => {
+              if (!window.confirm(`Permanently delete ${user.name} (${user.email})? This cannot be undone.`)) {
+                return;
+              }
+              run(() => deleteUserAction(user.id));
+            }}
+          >
+            <Trash2 className="h-4 w-4" /> Delete
+          </Button>
         </div>
       </td>
     </tr>

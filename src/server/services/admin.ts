@@ -176,6 +176,47 @@ export async function setUserPassword(
   return { ok: true };
 }
 
+/**
+ * Admin permanently deletes a user account. Refuses self-deletion and
+ * refuses to delete an instructor who still owns courses — their
+ * `Course.instructor` relation has no cascade, so this fails clearly up
+ * front instead of surfacing a raw foreign-key error, and prevents silently
+ * wiping out a whole course (and every enrolled student's progress) as a
+ * side effect of removing one account.
+ */
+export async function deleteUser(principal: Principal, userId: string) {
+  authorize(principal, { type: "admin:users" });
+  if (userId === principal.id) {
+    throw new AppError("You cannot delete your own account.", 422, "SELF_LOCKOUT");
+  }
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      _count: { select: { coursesAuthored: true } },
+    },
+  });
+  if (!user) throw new NotFoundError("User not found.");
+  if (user._count.coursesAuthored > 0) {
+    throw new AppError(
+      "This user still owns courses. Reassign or delete those courses first.",
+      422,
+      "HAS_COURSES",
+    );
+  }
+
+  await db.user.delete({ where: { id: userId } });
+  await writeAudit(principal.id, "USER_DELETED", "User", userId, {
+    name: user.name,
+    email: user.email,
+    role: user.role,
+  });
+  return { ok: true };
+}
+
 /** Organization-wide totals for the admin dashboard (FR-026). */
 export async function getAdminOverview(principal: Principal) {
   authorize(principal, { type: "admin:reports" });

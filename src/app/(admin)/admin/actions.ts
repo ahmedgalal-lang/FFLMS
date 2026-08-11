@@ -9,6 +9,7 @@ import {
   createUser,
   updateUserInfo,
   setUserPassword,
+  deleteUser,
 } from "@/server/services/admin";
 import { approveCourse, rejectCourse, archiveCourse } from "@/server/services/review";
 import {
@@ -104,6 +105,17 @@ export async function setUserPasswordAction(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid password." };
   try {
     await setUserPassword(principal, userId, parsed.data.newPassword);
+    return { ok: true };
+  } catch (err) {
+    return toState(err);
+  }
+}
+
+export async function deleteUserAction(userId: string): Promise<AdminState> {
+  const principal = await requirePrincipal();
+  try {
+    await deleteUser(principal, userId);
+    revalidatePath("/admin/users");
     return { ok: true };
   } catch (err) {
     return toState(err);
