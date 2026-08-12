@@ -42,6 +42,7 @@ export function VideoLesson({
   questions,
   onWatched,
   onEnded,
+  onProgress,
 }: {
   lessonId: string;
   src: string;
@@ -53,6 +54,10 @@ export function VideoLesson({
   onWatched: (watchedSec: number, durationSec: number) => void;
   /** Fired once when playback reaches the end of the video. */
   onEnded?: () => void;
+  /** Report the raw (currentPositionSec, durationSec) on every tick — unlike
+   * onWatched this reflects the current playhead, not cumulative watched
+   * time, so the parent can tell when playback is near the end. */
+  onProgress?: (currentSec: number, durationSec: number) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const mountRef = useRef<HTMLDivElement>(null);
@@ -90,6 +95,7 @@ export function VideoLesson({
    */
   const processTick = useCallback(
     (now: number, duration: number, isPlaying: boolean, pause: () => void) => {
+      onProgress?.(now, duration || 0);
       const delta = now - lastTimeRef.current;
       if (delta > 0 && delta < 1.5 && isPlaying) {
         watchedRef.current = Math.min(
@@ -118,7 +124,7 @@ export function VideoLesson({
     },
     // sortedQuestions is derived from a stable prop each render; save/onWatched are stable enough.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [save, onWatched],
+    [save, onWatched, onProgress],
   );
 
   function passCue(cue: CueQuestion) {

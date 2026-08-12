@@ -90,6 +90,7 @@ export function CoursePlayer({
   const [progress, setProgress] = useState(progressPercent);
   const [error, setError] = useState<string | null>(null);
   const [watchedPct, setWatchedPct] = useState(0);
+  const [remainingSec, setRemainingSec] = useState<number | null>(null);
   const [collapsedModules, setCollapsedModules] = useState<Record<string, boolean>>({});
 
   function toggleModule(moduleId: string) {
@@ -102,13 +103,21 @@ export function CoursePlayer({
     (b) => b.type === "VIDEO" && videoProvider(b.mediaUrl ?? "") !== "embed",
   );
   const minWatch = currentLesson?.minWatchPercent ?? 0;
-  const gateActive = minWatch > 0 && !!gateVideoBlock;
+  // Any trackable video gates the lesson — by default you must reach the
+  // last 30s of playback; an instructor-set minWatchPercent can unlock it
+  // earlier (or, if higher, still requires that much watched too).
+  const gateActive = !!gateVideoBlock;
+  const NEAR_END_SEC = 30;
+  const isNearEnd = remainingSec !== null && remainingSec <= NEAR_END_SEC;
+  const canComplete =
+    !gateActive || isNearEnd || (minWatch > 0 && watchedPct >= minWatch);
 
-  // Reset the watched meter whenever the lesson changes, seeding from saved
+  // Reset the watch meter whenever the lesson changes, seeding from saved
   // progress (we don't yet know duration, so start at 0 and let the player
   // report the true % once metadata loads).
   useEffect(() => {
     setWatchedPct(0);
+    setRemainingSec(null);
   }, [currentLesson?.id]);
 
   const allLessons = course.modules.flatMap((m) => m.lessons);
@@ -287,6 +296,14 @@ export function CoursePlayer({
                       onEnded={
                         isGate && !isCurrentComplete ? markComplete : undefined
                       }
+                      onProgress={
+                        isGate
+                          ? (currentSec, durationSec) =>
+                              setRemainingSec(
+                                durationSec > 0 ? durationSec - currentSec : null,
+                              )
+                          : undefined
+                      }
                     />
                   );
                 }
@@ -321,20 +338,18 @@ export function CoursePlayer({
               </p>
             )}
 
-            {gateActive && !isCurrentComplete && watchedPct < minWatch && (
+            {gateActive && !isCurrentComplete && !canComplete && (
               <p className="text-sm text-muted-foreground">
-                Watch at least {minWatch}% of the video to continue ({watchedPct}
-                % watched).
+                {minWatch > 0
+                  ? `Watch at least ${minWatch}% of the video, or reach the end, to continue (${watchedPct}% watched).`
+                  : "Keep watching — you can mark this lesson complete once you're near the end of the video."}
               </p>
             )}
 
             <div className="flex items-center gap-3 border-t pt-6">
               <Button
                 onClick={markComplete}
-                disabled={
-                  pending ||
-                  (gateActive && !isCurrentComplete && watchedPct < minWatch)
-                }
+                disabled={pending || (gateActive && !isCurrentComplete && !canComplete)}
               >
                 {pending ? <Loader2 className="animate-spin" /> : null}
                 {isCurrentComplete
