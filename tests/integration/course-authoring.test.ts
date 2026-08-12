@@ -7,7 +7,13 @@ import {
   updateCourse,
   getCourseForEditing,
 } from "@/server/services/course";
-import { addModule, addLesson, addContentBlock } from "@/server/services/curriculum";
+import {
+  addModule,
+  addLesson,
+  addContentBlock,
+  reorderModules,
+  reorderLessons,
+} from "@/server/services/curriculum";
 import { publishCourse } from "@/server/services/publish";
 import { AppError } from "@/server/http";
 import { searchCatalog } from "@/server/services/catalog";
@@ -126,5 +132,75 @@ describe("course authoring (US1)", () => {
 
     const tree = await getCourseForEditing(instructor, course.id);
     expect(tree?.modules[0]?.lessons.map((l) => l.title)).toEqual(["A", "B"]);
+  });
+
+  it("reorders lessons within a module by a full ordered id list", async () => {
+    const course = await createCourse(instructor, {
+      title: "Lesson Reorder Course",
+      summary: "Verifies lesson reordering.",
+      description: "",
+    });
+    created.push(course.id);
+    const mod = await addModule(instructor, course.id, "M");
+    const a = await addLesson(instructor, mod.id, "A");
+    const b = await addLesson(instructor, mod.id, "B");
+    const c = await addLesson(instructor, mod.id, "C");
+
+    await reorderLessons(instructor, mod.id, [c.id, a.id, b.id]);
+
+    const tree = await getCourseForEditing(instructor, course.id);
+    expect(tree?.modules[0]?.lessons.map((l) => l.title)).toEqual(["C", "A", "B"]);
+  });
+
+  it("reorders modules within a course by a full ordered id list", async () => {
+    const course = await createCourse(instructor, {
+      title: "Module Reorder Course",
+      summary: "Verifies module reordering.",
+      description: "",
+    });
+    created.push(course.id);
+    const m1 = await addModule(instructor, course.id, "First");
+    const m2 = await addModule(instructor, course.id, "Second");
+    const m3 = await addModule(instructor, course.id, "Third");
+
+    await reorderModules(instructor, course.id, [m3.id, m1.id, m2.id]);
+
+    const tree = await getCourseForEditing(instructor, course.id);
+    expect(tree?.modules.map((m) => m.title)).toEqual(["Third", "First", "Second"]);
+  });
+
+  it("blocks a non-owning instructor from reordering", async () => {
+    const course = await createCourse(instructor, {
+      title: "Reorder Ownership Course",
+      summary: "Only the owner may reorder.",
+      description: "",
+    });
+    created.push(course.id);
+    const mod = await addModule(instructor, course.id, "M");
+    const a = await addLesson(instructor, mod.id, "A");
+    const b = await addLesson(instructor, mod.id, "B");
+
+    await expect(
+      reorderLessons(otherInstructor, mod.id, [b.id, a.id]),
+    ).rejects.toBeInstanceOf(AuthorizationError);
+    await expect(
+      reorderModules(otherInstructor, course.id, [mod.id]),
+    ).rejects.toBeInstanceOf(AuthorizationError);
+  });
+
+  it("rejects a reorder list that doesn't exactly match the module's lessons", async () => {
+    const course = await createCourse(instructor, {
+      title: "Reorder Mismatch Course",
+      summary: "Verifies the reorder list is validated.",
+      description: "",
+    });
+    created.push(course.id);
+    const mod = await addModule(instructor, course.id, "M");
+    await addLesson(instructor, mod.id, "A");
+    await addLesson(instructor, mod.id, "B");
+
+    await expect(
+      reorderLessons(instructor, mod.id, ["not-a-real-id"]),
+    ).rejects.toBeInstanceOf(AppError);
   });
 });

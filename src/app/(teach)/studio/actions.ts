@@ -20,6 +20,8 @@ import {
   deleteContentBlock,
   addVideoQuestion,
   deleteVideoQuestion,
+  reorderModules,
+  reorderLessons,
 } from "@/server/services/curriculum";
 import { publishCourse, unpublishCourse } from "@/server/services/publish";
 import { submitForReview } from "@/server/services/review";
@@ -142,6 +144,35 @@ export async function deleteModuleAction(courseId: string, moduleId: string) {
   const principal = await requirePrincipal();
   try {
     await deleteModule(principal, moduleId);
+    revalidatePath(`/studio/${courseId}`);
+    return { ok: true };
+  } catch (err) {
+    return toState(err);
+  }
+}
+
+export async function reorderModulesAction(
+  courseId: string,
+  orderedIds: string[],
+) {
+  const principal = await requirePrincipal();
+  try {
+    await reorderModules(principal, courseId, orderedIds);
+    revalidatePath(`/studio/${courseId}`);
+    return { ok: true };
+  } catch (err) {
+    return toState(err);
+  }
+}
+
+export async function reorderLessonsAction(
+  courseId: string,
+  moduleId: string,
+  orderedIds: string[],
+) {
+  const principal = await requirePrincipal();
+  try {
+    await reorderLessons(principal, moduleId, orderedIds);
     revalidatePath(`/studio/${courseId}`);
     return { ok: true };
   } catch (err) {

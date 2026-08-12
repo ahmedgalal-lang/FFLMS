@@ -20,6 +20,8 @@ import {
   Award,
   ChevronDown,
   ChevronRight,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import type {
   Course,
@@ -40,6 +42,8 @@ import {
   publishCourseAction,
   unpublishCourseAction,
   submitForReviewAction,
+  reorderModulesAction,
+  reorderLessonsAction,
 } from "@/app/(teach)/studio/actions";
 import { ContentBlockEditor } from "@/components/course/content-block-editor";
 import { CourseSettingsDialog } from "@/components/course/course-settings-dialog";
@@ -82,6 +86,22 @@ export function CourseBuilder({
 
   function toggleModule(moduleId: string) {
     setCollapsed((prev) => ({ ...prev, [moduleId]: !prev[moduleId] }));
+  }
+
+  function moveModule(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (target < 0 || target >= course.modules.length) return;
+    const ids = course.modules.map((m) => m.id);
+    [ids[index], ids[target]] = [ids[target]!, ids[index]!];
+    run(() => reorderModulesAction(course.id, ids));
+  }
+
+  function moveLesson(mod: FullModule, index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (target < 0 || target >= mod.lessons.length) return;
+    const ids = mod.lessons.map((l) => l.id);
+    [ids[index], ids[target]] = [ids[target]!, ids[index]!];
+    run(() => reorderLessonsAction(course.id, mod.id, ids));
   }
 
   function run(fn: () => Promise<{ error?: string } | undefined | void>) {
@@ -240,15 +260,35 @@ export function CourseBuilder({
                   </span>
                 )}
               </button>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={`Delete module ${mod.title}`}
-                disabled={pending}
-                onClick={() => run(() => deleteModuleAction(course.id, mod.id))}
-              >
-                <Trash2 />
-              </Button>
+              <div className="flex shrink-0 items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Move module ${mod.title} up`}
+                  disabled={pending || mi === 0}
+                  onClick={() => moveModule(mi, -1)}
+                >
+                  <ArrowUp />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Move module ${mod.title} down`}
+                  disabled={pending || mi === course.modules.length - 1}
+                  onClick={() => moveModule(mi, 1)}
+                >
+                  <ArrowDown />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Delete module ${mod.title}`}
+                  disabled={pending}
+                  onClick={() => run(() => deleteModuleAction(course.id, mod.id))}
+                >
+                  <Trash2 />
+                </Button>
+              </div>
             </div>
 
             {!isCollapsed && (
@@ -264,17 +304,37 @@ export function CourseBuilder({
                         <Badge variant="outline">optional</Badge>
                       )}
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`Delete lesson ${lesson.title}`}
-                      disabled={pending}
-                      onClick={() =>
-                        run(() => deleteLessonAction(course.id, lesson.id))
-                      }
-                    >
-                      <Trash2 />
-                    </Button>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Move lesson ${lesson.title} up`}
+                        disabled={pending || li === 0}
+                        onClick={() => moveLesson(mod, li, -1)}
+                      >
+                        <ArrowUp />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Move lesson ${lesson.title} down`}
+                        disabled={pending || li === mod.lessons.length - 1}
+                        onClick={() => moveLesson(mod, li, 1)}
+                      >
+                        <ArrowDown />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Delete lesson ${lesson.title}`}
+                        disabled={pending}
+                        onClick={() =>
+                          run(() => deleteLessonAction(course.id, lesson.id))
+                        }
+                      >
+                        <Trash2 />
+                      </Button>
+                    </div>
                   </div>
 
                   {/* Content blocks */}
