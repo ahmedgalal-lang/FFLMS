@@ -13,6 +13,8 @@ import {
   Loader2,
   ChevronDown,
   ChevronRight,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import type { ContentBlock } from "@prisma/client";
 import { isEmbedVideo, videoProvider } from "@/lib/video";
@@ -92,6 +94,7 @@ export function CoursePlayer({
   const [watchedPct, setWatchedPct] = useState(0);
   const [remainingSec, setRemainingSec] = useState<number | null>(null);
   const [collapsedModules, setCollapsedModules] = useState<Record<string, boolean>>({});
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   function toggleModule(moduleId: string) {
     setCollapsedModules((prev) => ({ ...prev, [moduleId]: !prev[moduleId] }));
@@ -151,8 +154,14 @@ export function CoursePlayer({
     : false;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
+    <div
+      className={cn(
+        "grid gap-6",
+        sidebarOpen ? "lg:grid-cols-[300px_1fr]" : "lg:grid-cols-1",
+      )}
+    >
       {/* Sidebar: curriculum + progress */}
+      {sidebarOpen && (
       <aside className="space-y-4">
         <div>
           <Link
@@ -244,9 +253,26 @@ export function CoursePlayer({
           })}
         </nav>
       </aside>
+      )}
 
       {/* Main: current lesson */}
       <div className="space-y-6">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setSidebarOpen((v) => !v)}
+          aria-expanded={sidebarOpen}
+          aria-label={sidebarOpen ? "Hide course list" : "Show course list"}
+          className="gap-1.5"
+        >
+          {sidebarOpen ? (
+            <PanelLeftClose className="h-4 w-4" />
+          ) : (
+            <PanelLeftOpen className="h-4 w-4" />
+          )}
+          {sidebarOpen ? "Hide list" : "Show list"}
+        </Button>
+
         {!currentLesson ? (
           <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
             This course has no lessons yet.
