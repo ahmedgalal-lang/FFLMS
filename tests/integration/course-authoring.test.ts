@@ -6,6 +6,8 @@ import {
   createCourse,
   updateCourse,
   getCourseForEditing,
+  reorderCourses,
+  listAllCourses,
 } from "@/server/services/course";
 import {
   addModule,
@@ -21,6 +23,7 @@ import { searchCatalog } from "@/server/services/catalog";
 let instructor: Principal;
 let otherInstructor: Principal;
 let student: Principal;
+let admin: Principal;
 const created: string[] = [];
 const users: string[] = [];
 
@@ -35,10 +38,14 @@ beforeAll(async () => {
   const s = await db.user.create({
     data: { email: `stu-${suffix}@t.test`, name: "Test Stu", role: "STUDENT" },
   });
-  users.push(i.id, o.id, s.id);
+  const a = await db.user.create({
+    data: { email: `admin-${suffix}@t.test`, name: "Test Admin", role: "ADMIN" },
+  });
+  users.push(i.id, o.id, s.id, a.id);
   instructor = { id: i.id, role: "INSTRUCTOR", status: "ACTIVE" };
   otherInstructor = { id: o.id, role: "INSTRUCTOR", status: "ACTIVE" };
   student = { id: s.id, role: "STUDENT", status: "ACTIVE" };
+  admin = { id: a.id, role: "ADMIN", status: "ACTIVE" };
 });
 
 afterAll(async () => {
@@ -202,5 +209,87 @@ describe("course authoring (US1)", () => {
     await expect(
       reorderLessons(instructor, mod.id, ["not-a-real-id"]),
     ).rejects.toBeInstanceOf(AppError);
+  });
+
+  it("reorders courses by permuting the order values they already occupy", async () => {
+    const c1 = await createCourse(instructor, {
+      title: "Course Order A",
+      summary: "First created.",
+      description: "",
+    });
+    const c2 = await createCourse(instructor, {
+      title: "Course Order B",
+      summary: "Second created.",
+      description: "",
+    });
+    const c3 = await createCourse(instructor, {
+      title: "Course Order C",
+      summary: "Third created.",
+      description: "",
+    });
+    created.push(c1.id, c2.id, c3.id);
+
+    // New courses are appended in creation order.
+    expect(c1.order).toBeLessThan(c2.order);
+    expect(c2.order).toBeLessThan(c3.order);
+
+    // Put C first, A second, B third — a genuine reorder, not just a
+    // relabeling, so it also proves the "no-op if all defaulted to 0"
+    // failure mode from before createCourse assigned distinct positions.
+    await reorderCourses(instructor, [c3.id, c1.id, c2.id]);
+
+    const reordered = await db.course.findMany({
+      where: { id: { in: [c1.id, c2.id, c3.id] } },
+      orderBy: { order: "asc" },
+      select: { id: true },
+    });
+    expect(reordered.map((c) => c.id)).toEqual([c3.id, c1.id, c2.id]);
+
+    // A course created afterwards still appends past the reordered max,
+    // rather than colliding with a permuted value.
+    const after = await createCourse(instructor, {
+      title: "Course Order Bystander",
+      summary: "Created after the reorder call.",
+      description: "",
+    });
+    created.push(after.id);
+    const maxReordered = Math.max(
+      ...(await db.course.findMany({
+        where: { id: { in: [c1.id, c2.id, c3.id] } },
+        select: { order: true },
+      })).map((c) => c.order),
+    );
+    expect(after.order).toBeGreaterThan(maxReordered);
+  });
+
+  it("blocks a non-owning instructor from reordering courses; admin may reorder any", async () => {
+    const mine = await createCourse(instructor, {
+      title: "Reorder Ownership Course",
+      summary: "Only the owner (or admin) may reorder.",
+      description: "",
+    });
+    created.push(mine.id);
+
+    await expect(
+      reorderCourses(otherInstructor, [mine.id]),
+    ).rejects.toBeInstanceOf(AuthorizationError);
+    await expect(reorderCourses(admin, [mine.id])).resolves.toBeUndefined();
+  });
+
+  it("rejects an empty or non-existent reorder list", async () => {
+    await expect(reorderCourses(instructor, [])).rejects.toBeInstanceOf(
+      AppError,
+    );
+    await expect(
+      reorderCourses(instructor, ["not-a-real-course-id"]),
+    ).rejects.toBeInstanceOf(AppError);
+  });
+
+  it("only admins can list all courses platform-wide", async () => {
+    await expect(listAllCourses(instructor)).rejects.toBeInstanceOf(
+      AuthorizationError,
+    );
+    const all = await listAllCourses(admin);
+    expect(Array.isArray(all)).toBe(true);
   });
 });

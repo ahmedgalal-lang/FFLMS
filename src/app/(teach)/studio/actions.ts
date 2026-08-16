@@ -8,6 +8,7 @@ import {
   updateCourse,
   deleteCourse,
   setCourseVisibility,
+  reorderCourses,
 } from "@/server/services/course";
 import {
   addModule,
@@ -112,6 +113,20 @@ export async function deleteCourseAction(
   revalidatePath("/studio");
   revalidatePath("/courses");
   redirect("/studio");
+}
+
+export async function reorderCoursesAction(
+  orderedIds: string[],
+): Promise<ActionState> {
+  const principal = await requirePrincipal();
+  try {
+    await reorderCourses(principal, orderedIds);
+    revalidatePath("/studio");
+    revalidatePath("/courses");
+    return { ok: true };
+  } catch (err) {
+    return toState(err);
+  }
 }
 
 export async function addModuleAction(courseId: string, title: string) {

@@ -65,7 +65,7 @@ export async function loadActiveEnrollmentForAuthz(
 export async function listMyEnrollments(principal: Principal) {
   return db.enrollment.findMany({
     where: { studentId: principal.id, status: { not: "CANCELLED" } },
-    orderBy: { enrolledAt: "desc" },
+    orderBy: [{ course: { order: "asc" } }, { enrolledAt: "desc" }],
     include: {
       course: {
         select: {

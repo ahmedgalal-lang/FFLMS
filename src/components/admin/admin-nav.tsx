@@ -1,9 +1,18 @@
 import Link from "next/link";
-import { LayoutDashboard, Users, ClipboardCheck, Tags, BarChart3, Award } from "lucide-react";
+import {
+  LayoutDashboard,
+  Users,
+  ClipboardCheck,
+  Tags,
+  BarChart3,
+  Award,
+  ListOrdered,
+} from "lucide-react";
 
 const links = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/users", label: "Users", icon: Users },
+  { href: "/admin/courses", label: "Courses", icon: ListOrdered },
   { href: "/admin/review", label: "Review queue", icon: ClipboardCheck },
   { href: "/admin/categories", label: "Categories", icon: Tags },
   { href: "/admin/certificates", label: "Certificates", icon: Award },

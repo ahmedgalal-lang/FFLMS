@@ -12,6 +12,7 @@ import {
   deleteUser,
 } from "@/server/services/admin";
 import { approveCourse, rejectCourse, archiveCourse } from "@/server/services/review";
+import { reorderCourses } from "@/server/services/course";
 import {
   createCategory,
   updateCategory,
@@ -195,6 +196,20 @@ export async function deleteCategoryAction(categoryId: string): Promise<AdminSta
   try {
     await deleteCategory(principal, categoryId);
     revalidatePath("/admin/categories");
+    return { ok: true };
+  } catch (err) {
+    return toState(err);
+  }
+}
+
+export async function reorderCoursesAdminAction(
+  orderedIds: string[],
+): Promise<AdminState> {
+  const principal = await requirePrincipal();
+  try {
+    await reorderCourses(principal, orderedIds);
+    revalidatePath("/admin/courses");
+    revalidatePath("/studio");
     return { ok: true };
   } catch (err) {
     return toState(err);

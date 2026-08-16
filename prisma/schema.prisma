@@ -168,6 +168,7 @@ model Course {
   categoryId           String?
   isRequiredSequential Boolean      @default(false)
   completionThreshold  Int          @default(100)
+  order                Int          @default(0)
   publishedAt          DateTime?
   deletedAt            DateTime?
   createdAt            DateTime     @default(now())
@@ -186,6 +187,7 @@ model Course {
   @@index([status, categoryId])
   @@index([instructorId])
   @@index([status, publishedAt])
+  @@index([status, order])
 }
 
 model Module {

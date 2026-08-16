@@ -63,6 +63,7 @@ An authored unit of learning.
 | categoryId | FK → Category? | |
 | isRequiredSequential | bool | must lessons be completed in order |
 | completionThreshold | int | % required to complete (default 100) |
+| order | int | curriculum position across courses (default 0); sorts the catalog and My Learning so students see courses in the sequence an instructor/admin intends |
 | publishedAt | datetime? | |
 | deletedAt | datetime? | soft delete |
 

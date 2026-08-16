@@ -44,6 +44,7 @@ export type Action =
   | { type: "course:update"; course: CourseResource }
   | { type: "course:delete"; course: CourseResource }
   | { type: "course:publish"; course: CourseResource }
+  | { type: "course:reorder"; course: CourseResource }
   // Curriculum (modules/lessons/content) — gated by the owning course
   | { type: "curriculum:edit"; course: CourseResource }
   | { type: "course:visibility"; course: CourseResource }
@@ -72,7 +73,8 @@ export type Action =
   | { type: "admin:review" }
   | { type: "admin:categories" }
   | { type: "admin:reports" }
-  | { type: "admin:certificates" };
+  | { type: "admin:certificates" }
+  | { type: "admin:courses" };
 
 const isAdmin = (p: Principal) => p.role === "ADMIN";
 const owns = (p: Principal, course: CourseResource) =>
@@ -115,6 +117,7 @@ export function can(principal: Principal, action: Action): boolean {
     case "course:update":
     case "course:delete":
     case "course:publish":
+    case "course:reorder":
     case "course:visibility":
     case "curriculum:edit":
     case "quiz:manage":
@@ -153,6 +156,7 @@ export function can(principal: Principal, action: Action): boolean {
     case "admin:categories":
     case "admin:reports":
     case "admin:certificates":
+    case "admin:courses":
       return false; // only admins, already returned true above
 
     default:

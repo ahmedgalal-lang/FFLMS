@@ -4,22 +4,11 @@ import { Users } from "lucide-react";
 import { requirePrincipal } from "@/server/auth";
 import { listInstructorCourses } from "@/server/services/course";
 import { db } from "@/server/db";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CreateCourseDialog } from "@/components/course/create-course-dialog";
-import type { CourseStatus } from "@prisma/client";
+import { StudioCourseGrid } from "@/components/course/studio-course-grid";
 
 export const metadata: Metadata = { title: "Studio" };
-
-const statusVariant: Record<
-  CourseStatus,
-  "default" | "secondary" | "success" | "warning"
-> = {
-  DRAFT: "secondary",
-  IN_REVIEW: "warning",
-  PUBLISHED: "success",
-  ARCHIVED: "secondary",
-};
 
 export default async function StudioPage() {
   const principal = await requirePrincipal();
@@ -64,30 +53,7 @@ export default async function StudioPage() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {courses.map((course) => (
-            <Link
-              key={course.id}
-              href={`/studio/${course.id}`}
-              className="rounded-lg border bg-card p-5 transition-colors hover:border-primary"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <h2 className="font-semibold leading-tight">{course.title}</h2>
-                <Badge variant={statusVariant[course.status]}>
-                  {course.status.toLowerCase().replace("_", " ")}
-                </Badge>
-              </div>
-              <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
-                {course.summary}
-              </p>
-              <div className="mt-4 flex gap-4 text-xs text-muted-foreground">
-                <span>{course._count.modules} modules</span>
-                <span>{course._count.enrollments} enrolled</span>
-                {course.category && <span>{course.category.name}</span>}
-              </div>
-            </Link>
-          ))}
-        </div>
+        <StudioCourseGrid courses={courses} />
       )}
     </div>
   );

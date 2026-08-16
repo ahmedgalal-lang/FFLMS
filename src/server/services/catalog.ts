@@ -28,7 +28,7 @@ export async function searchCatalog(query: CatalogQuery, page: PageParams) {
   const [items, total] = await Promise.all([
     db.course.findMany({
       where,
-      orderBy: { publishedAt: "desc" },
+      orderBy: [{ order: "asc" }, { publishedAt: "desc" }],
       skip: page.skip,
       take: page.pageSize,
       select: {

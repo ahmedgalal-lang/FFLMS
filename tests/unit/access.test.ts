@@ -93,6 +93,27 @@ describe("course authoring", () => {
       false,
     );
   });
+
+  it("instructors may reorder only their own courses; admins may reorder any", () => {
+    expect(can(instructor, { type: "course:reorder", course: ownedDraft })).toBe(
+      true,
+    );
+    expect(
+      can(instructor, { type: "course:reorder", course: foreignDraft }),
+    ).toBe(false);
+    expect(can(admin, { type: "course:reorder", course: foreignDraft })).toBe(
+      true,
+    );
+    expect(can(student, { type: "course:reorder", course: ownedDraft })).toBe(
+      false,
+    );
+  });
+
+  it("only admins may list courses platform-wide", () => {
+    expect(can(admin, { type: "admin:courses" })).toBe(true);
+    expect(can(instructor, { type: "admin:courses" })).toBe(false);
+    expect(can(student, { type: "admin:courses" })).toBe(false);
+  });
 });
 
 describe("course:read visibility", () => {

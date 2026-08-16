@@ -38,6 +38,10 @@ export async function createCourse(
   const data = courseCreateSchema.parse(input);
 
   const instructorId = await resolveCourseOwner(principal, data.instructorId);
+  // Append at the end of the curriculum order, one past the current max —
+  // new courses otherwise all default to 0 and collide with each other.
+  const { _max } = await db.course.aggregate({ _max: { order: true } });
+  const order = (_max.order ?? -1) + 1;
 
   return db.course.create({
     data: {
@@ -49,6 +53,7 @@ export async function createCourse(
       coverImageUrl: data.coverImageUrl ?? null,
       instructorId,
       status: "DRAFT",
+      order,
     },
   });
 }
@@ -173,12 +178,63 @@ export async function getCourseForEditing(
 export async function listInstructorCourses(principal: Principal) {
   return db.course.findMany({
     where: { instructorId: principal.id, deletedAt: null },
-    orderBy: { updatedAt: "desc" },
+    orderBy: { order: "asc" },
     include: {
       category: true,
       _count: { select: { modules: true, enrollments: true } },
     },
   });
+}
+
+/** All non-deleted courses platform-wide, in curriculum order — admin only. */
+export async function listAllCourses(principal: Principal) {
+  authorize(principal, { type: "admin:courses" });
+  return db.course.findMany({
+    where: { deletedAt: null },
+    orderBy: { order: "asc" },
+    include: {
+      category: true,
+      instructor: { select: { name: true } },
+      _count: { select: { modules: true, enrollments: true } },
+    },
+  });
+}
+
+/**
+ * Reorder a set of courses by a full ordered list of ids, so students see
+ * them in a deliberate sequence (e.g. an intro course before advanced
+ * follow-ups) wherever multiple courses are listed together — the catalog
+ * and My Learning. Advisory only: nothing blocks a student from starting a
+ * later course first.
+ *
+ * Each course must pass authorization individually (an instructor may only
+ * reorder courses they own; an admin may reorder any). Rather than
+ * renumbering every course in the system, this permutes just the given
+ * courses among the order values they already occupy — so unrelated
+ * courses (another instructor's, outside this reorder) keep their position.
+ */
+export async function reorderCourses(principal: Principal, orderedIds: string[]) {
+  if (orderedIds.length === 0) {
+    throw new AppError("Reorder list must not be empty.");
+  }
+  const courses = await db.course.findMany({
+    where: { id: { in: orderedIds }, deletedAt: null },
+    select: { id: true, order: true, instructorId: true, status: true, visibility: true },
+  });
+  const byId = new Map(courses.map((c) => [c.id, c]));
+  if (byId.size !== orderedIds.length) {
+    throw new AppError("Reorder list must match existing courses.");
+  }
+  for (const course of courses) {
+    authorize(principal, { type: "course:reorder", course });
+  }
+
+  const slots = courses.map((c) => c.order).sort((a, b) => a - b);
+  await db.$transaction(
+    orderedIds.map((id, i) =>
+      db.course.update({ where: { id }, data: { order: slots[i]! } }),
+    ),
+  );
 }
 
 export { ConflictError };
