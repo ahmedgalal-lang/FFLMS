@@ -13,7 +13,15 @@ type CatalogCourse = {
   _count: { enrollments: number };
 };
 
-export function CourseCard({ course }: { course: CatalogCourse }) {
+export function CourseCard({
+  course,
+  hideCategoryBadge,
+}: {
+  course: CatalogCourse;
+  /** Skip the category badge when the card already sits under a section
+   * heading naming that same category (see the grouped catalog view). */
+  hideCategoryBadge?: boolean;
+}) {
   return (
     <Link
       href={`/courses/${course.slug}`}
@@ -34,7 +42,7 @@ export function CourseCard({ course }: { course: CatalogCourse }) {
         )}
       </div>
       <div className="flex flex-1 flex-col p-4">
-        {course.category && (
+        {course.category && !hideCategoryBadge && (
           <Badge variant="secondary" className="mb-2 w-fit">
             {course.category.name}
           </Badge>

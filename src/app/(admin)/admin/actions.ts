@@ -17,6 +17,7 @@ import {
   createCategory,
   updateCategory,
   deleteCategory,
+  reorderCategories,
 } from "@/server/services/category";
 import { revokeCertificate, reinstateCertificate } from "@/server/services/certificate";
 import {
@@ -196,6 +197,20 @@ export async function deleteCategoryAction(categoryId: string): Promise<AdminSta
   try {
     await deleteCategory(principal, categoryId);
     revalidatePath("/admin/categories");
+    return { ok: true };
+  } catch (err) {
+    return toState(err);
+  }
+}
+
+export async function reorderCategoriesAction(
+  orderedIds: string[],
+): Promise<AdminState> {
+  const principal = await requirePrincipal();
+  try {
+    await reorderCategories(principal, orderedIds);
+    revalidatePath("/admin/categories");
+    revalidatePath("/courses");
     return { ok: true };
   } catch (err) {
     return toState(err);

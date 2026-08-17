@@ -3,6 +3,18 @@ import type { Prisma } from "@prisma/client";
 import type { CatalogQuery } from "@/lib/validation";
 import type { PageParams } from "@/server/http";
 
+const catalogCourseSelect = {
+  id: true,
+  title: true,
+  slug: true,
+  summary: true,
+  coverImageUrl: true,
+  publishedAt: true,
+  instructor: { select: { name: true } },
+  category: { select: { name: true, slug: true } },
+  _count: { select: { enrollments: true } },
+} satisfies Prisma.CourseSelect;
+
 /**
  * Public catalog search over PUBLISHED courses. Uses case-insensitive matching
  * on title/summary plus optional category filter. For the reference scale
@@ -31,17 +43,7 @@ export async function searchCatalog(query: CatalogQuery, page: PageParams) {
       orderBy: [{ order: "asc" }, { publishedAt: "desc" }],
       skip: page.skip,
       take: page.pageSize,
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        summary: true,
-        coverImageUrl: true,
-        publishedAt: true,
-        instructor: { select: { name: true } },
-        category: { select: { name: true, slug: true } },
-        _count: { select: { enrollments: true } },
-      },
+      select: catalogCourseSelect,
     }),
     db.course.count({ where }),
   ]);
@@ -83,5 +85,52 @@ export async function getPublicCourse(slug: string) {
 }
 
 export async function listCategories() {
-  return db.category.findMany({ orderBy: { name: "asc" } });
+  return db.category.findMany({ orderBy: { order: "asc" } });
+}
+
+/**
+ * Default (unfiltered, unsearched) catalog browse view — every published,
+ * open course grouped into sections by its umbrella category, both the
+ * categories and the courses within each in curriculum order, so students
+ * see e.g. "Consultant Essentials" before "Consultant Tools". Courses with
+ * no category are grouped into a trailing "More courses" bucket instead of
+ * being dropped. Only meant for the no-query, no-filter landing view —
+ * search and single-category filtering keep the flat paginated grid.
+ */
+export async function browseCatalogGrouped() {
+  const [categories, courses] = await Promise.all([
+    db.category.findMany({ orderBy: { order: "asc" } }),
+    db.course.findMany({
+      where: { status: "PUBLISHED", visibility: "OPEN", deletedAt: null },
+      orderBy: [{ order: "asc" }, { publishedAt: "desc" }],
+      select: catalogCourseSelect,
+    }),
+  ]);
+
+  type CatalogCourse = (typeof courses)[number];
+  const byCategorySlug = new Map<string, CatalogCourse[]>();
+  const uncategorized: CatalogCourse[] = [];
+  for (const course of courses) {
+    if (course.category) {
+      const bucket = byCategorySlug.get(course.category.slug) ?? [];
+      bucket.push(course);
+      byCategorySlug.set(course.category.slug, bucket);
+    } else {
+      uncategorized.push(course);
+    }
+  }
+
+  const groups: { category: (typeof categories)[number] | null; courses: CatalogCourse[] }[] =
+    categories
+      .map((category) => ({
+        category,
+        courses: byCategorySlug.get(category.slug) ?? [],
+      }))
+      .filter((g) => g.courses.length > 0);
+
+  if (uncategorized.length > 0) {
+    groups.push({ category: null, courses: uncategorized });
+  }
+
+  return { groups, total: courses.length };
 }

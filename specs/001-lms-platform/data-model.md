@@ -45,6 +45,7 @@ Taxonomy for classification/filtering.
 | name | string | unique |
 | slug | string | unique, indexed |
 | description | string? | |
+| order | int | umbrella section position on the public catalog (default 0) |
 
 Relations: `courses (Course[])`.
 

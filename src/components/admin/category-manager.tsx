@@ -2,12 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   createCategoryAction,
   deleteCategoryAction,
+  reorderCategoriesAction,
 } from "@/app/(admin)/admin/actions";
 
 type Category = {
@@ -31,6 +32,14 @@ export function CategoryManager({ categories }: { categories: Category[] }) {
       if (res?.error) setError(res.error);
       else router.refresh();
     });
+  }
+
+  function move(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (target < 0 || target >= categories.length) return;
+    const ids = categories.map((c) => c.id);
+    [ids[index], ids[target]] = [ids[target]!, ids[index]!];
+    run(() => reorderCategoriesAction(ids));
   }
 
   return (
@@ -59,11 +68,17 @@ export function CategoryManager({ categories }: { categories: Category[] }) {
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
+      {categories.length > 0 && (
+        <p className="text-xs text-muted-foreground">
+          This order controls the section order on the public catalog — first
+          umbrella first.
+        </p>
+      )}
       <ul className="divide-y rounded-lg border">
         {categories.length === 0 && (
           <li className="p-4 text-sm text-muted-foreground">No categories yet.</li>
         )}
-        {categories.map((c) => (
+        {categories.map((c, i) => (
           <li key={c.id} className="flex items-center justify-between p-3">
             <div>
               <span className="font-medium">{c.name}</span>
@@ -71,15 +86,35 @@ export function CategoryManager({ categories }: { categories: Category[] }) {
                 {c._count.courses} course{c._count.courses === 1 ? "" : "s"}
               </span>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={`Delete ${c.name}`}
-              disabled={pending}
-              onClick={() => run(() => deleteCategoryAction(c.id))}
-            >
-              <Trash2 />
-            </Button>
+            <div className="flex shrink-0 items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Move ${c.name} up`}
+                disabled={pending || i === 0}
+                onClick={() => move(i, -1)}
+              >
+                <ArrowUp />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Move ${c.name} down`}
+                disabled={pending || i === categories.length - 1}
+                onClick={() => move(i, 1)}
+              >
+                <ArrowDown />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Delete ${c.name}`}
+                disabled={pending}
+                onClick={() => run(() => deleteCategoryAction(c.id))}
+              >
+                <Trash2 />
+              </Button>
+            </div>
           </li>
         ))}
       </ul>

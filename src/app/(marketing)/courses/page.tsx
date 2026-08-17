@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Search } from "lucide-react";
-import { searchCatalog, listCategories } from "@/server/services/catalog";
+import {
+  searchCatalog,
+  listCategories,
+  browseCatalogGrouped,
+} from "@/server/services/catalog";
 import { catalogQuerySchema } from "@/lib/validation";
 import { parsePagination, pageMeta } from "@/server/http";
 import { CourseCard } from "@/components/course/course-card";
@@ -21,14 +25,23 @@ export default async function CatalogPage({
     category: sp.category,
     page: sp.page,
   });
+  // The default landing view (no search, no category filter) groups courses
+  // into sections by umbrella category. A search or a single-category
+  // filter falls back to the flat, paginated grid — grouping doesn't add
+  // anything once you've already narrowed the results.
+  const isBrowsing = !query.q && !query.category;
   const pagination = parsePagination(
     new URLSearchParams({ page: String(query.page ?? 1) }),
   );
-  const [{ items, total }, categories] = await Promise.all([
-    searchCatalog(query, pagination),
+
+  const [categories, flat, grouped] = await Promise.all([
     listCategories(),
+    isBrowsing ? null : searchCatalog(query, pagination),
+    isBrowsing ? browseCatalogGrouped() : null,
   ]);
-  const meta = pageMeta(total, pagination);
+
+  const total = flat ? flat.total : (grouped?.total ?? 0);
+  const meta = flat ? pageMeta(flat.total, pagination) : null;
 
   return (
     <div className="space-y-6">
@@ -66,19 +79,45 @@ export default async function CatalogPage({
         <Button type="submit">Search</Button>
       </form>
 
-      {items.length === 0 ? (
+      {total === 0 ? (
         <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
           No courses match your search.
         </div>
+      ) : grouped ? (
+        <div className="space-y-10">
+          {grouped.groups.map(({ category, courses }) => (
+            <div key={category?.id ?? "uncategorized"} className="space-y-4">
+              <div>
+                <h2 className="text-lg font-semibold">
+                  {category?.name ?? "More courses"}
+                </h2>
+                {category?.description && (
+                  <p className="text-sm text-muted-foreground">
+                    {category.description}
+                  </p>
+                )}
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {courses.map((course) => (
+                  <CourseCard
+                    key={course.id}
+                    course={course}
+                    hideCategoryBadge={category !== null}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((course) => (
+          {flat!.items.map((course) => (
             <CourseCard key={course.id} course={course} />
           ))}
         </div>
       )}
 
-      {meta.totalPages > 1 && (
+      {meta && meta.totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 pt-4">
           {Array.from({ length: meta.totalPages }, (_, i) => i + 1).map((p) => {
             const params = new URLSearchParams();
