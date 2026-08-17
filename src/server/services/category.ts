@@ -67,11 +67,16 @@ export async function updateCategory(
   const data = categorySchema.parse(input);
   const category = await db.category.findUnique({ where: { id: categoryId } });
   if (!category) throw new NotFoundError("Category not found.");
+  const slug = slugify(data.name);
+  const collision = await db.category.findFirst({
+    where: { id: { not: categoryId }, OR: [{ name: data.name }, { slug }] },
+  });
+  if (collision) throw new ConflictError("A category with that name already exists.");
   return db.category.update({
     where: { id: categoryId },
     data: {
       name: data.name,
-      slug: slugify(data.name),
+      slug,
       description: data.description ?? null,
     },
   });

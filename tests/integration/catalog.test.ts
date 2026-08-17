@@ -8,10 +8,11 @@ import { addModule, addLesson, addContentBlock } from "@/server/services/curricu
 import {
   createCategory,
   updateCategory,
+  deleteCategory,
   reorderCategories,
 } from "@/server/services/category";
 import { browseCatalogGrouped } from "@/server/services/catalog";
-import { AppError } from "@/server/http";
+import { AppError, ConflictError } from "@/server/http";
 
 let instructor: Principal;
 let admin: Principal;
@@ -160,5 +161,52 @@ describe("grouped catalog browse", () => {
     const group = groups.find((g) => g.category?.id === renamed.id);
     expect(group?.category?.slug).toBe(renamed.slug);
     expect(group?.courses.map((c) => c.id)).toContain(course.id);
+  });
+});
+
+describe("editing and deleting umbrella categories", () => {
+  it("rejects renaming a category to a name another category already has", async () => {
+    const suffix = Date.now();
+    const taken = await createCategory(admin, { name: `Taken Name ${suffix}` });
+    const mine = await createCategory(admin, { name: `My Name ${suffix}` });
+    categoryIds.push(taken.id, mine.id);
+
+    await expect(
+      updateCategory(admin, mine.id, { name: taken.name }),
+    ).rejects.toBeInstanceOf(ConflictError);
+
+    // Renaming to its own current name is still allowed (no false collision).
+    await expect(
+      updateCategory(admin, mine.id, { name: mine.name, description: "still fine" }),
+    ).resolves.toMatchObject({ name: mine.name });
+  });
+
+  it("blocks non-admins from editing or deleting categories", async () => {
+    const c = await createCategory(admin, { name: `Guarded Edit ${Date.now()}` });
+    categoryIds.push(c.id);
+    await expect(
+      updateCategory(instructor, c.id, { name: "Hijacked" }),
+    ).rejects.toBeInstanceOf(AuthorizationError);
+    await expect(
+      deleteCategory(instructor, c.id),
+    ).rejects.toBeInstanceOf(AuthorizationError);
+  });
+
+  it("deleting a category clears categoryId on its courses rather than blocking", async () => {
+    const suffix = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+    const category = await createCategory(admin, { name: `Disposable ${suffix}` });
+    const course = await publishedCourse(suffix, `Orphaned Course ${suffix}`, category.id);
+
+    await deleteCategory(admin, category.id);
+
+    const reloaded = await db.course.findUnique({
+      where: { id: course.id },
+      select: { categoryId: true },
+    });
+    expect(reloaded?.categoryId).toBeNull();
+
+    const { groups } = await browseCatalogGrouped();
+    const uncategorizedGroup = groups.find((g) => g.category === null);
+    expect(uncategorizedGroup?.courses.map((c) => c.id)).toContain(course.id);
   });
 });
