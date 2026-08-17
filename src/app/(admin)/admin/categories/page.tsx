@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { requirePrincipal } from "@/server/auth";
-import { listCategoriesWithCounts } from "@/server/services/category";
+import { listCategoriesWithCourses } from "@/server/services/category";
 import { AdminNav } from "@/components/admin/admin-nav";
 import { CategoryManager } from "@/components/admin/category-manager";
 
@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Categories · Admin" };
 
 export default async function AdminCategoriesPage() {
   const principal = await requirePrincipal();
-  const categories = await listCategoriesWithCounts(principal);
+  const { categories, uncategorized } = await listCategoriesWithCourses(principal);
 
   return (
     <div className="space-y-6">
@@ -19,7 +19,7 @@ export default async function AdminCategoriesPage() {
         </p>
       </div>
       <AdminNav />
-      <CategoryManager categories={categories} />
+      <CategoryManager categories={categories} uncategorized={uncategorized} />
     </div>
   );
 }

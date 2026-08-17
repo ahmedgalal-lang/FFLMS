@@ -6,12 +6,67 @@ import { slugify } from "@/lib/utils";
 
 /** Category/taxonomy management (FR-025). Admin-only mutations. */
 
-export async function listCategoriesWithCounts(principal: Principal) {
+/**
+ * Every umbrella category with its courses nested underneath (all
+ * non-deleted courses, any status — this is the authoring/admin view, not
+ * the public catalog), plus a separate bucket for courses with no category
+ * yet, so the admin page can both show and move courses between umbrellas.
+ */
+export async function listCategoriesWithCourses(principal: Principal) {
   authorize(principal, { type: "admin:categories" });
-  return db.category.findMany({
-    orderBy: { order: "asc" },
-    include: { _count: { select: { courses: true } } },
+  const [categories, courses] = await Promise.all([
+    db.category.findMany({ orderBy: { order: "asc" } }),
+    db.course.findMany({
+      where: { deletedAt: null },
+      orderBy: { order: "asc" },
+      select: { id: true, title: true, status: true, categoryId: true },
+    }),
+  ]);
+
+  type CategoryCourse = (typeof courses)[number];
+  const byCategoryId = new Map<string, CategoryCourse[]>();
+  const uncategorized: CategoryCourse[] = [];
+  for (const course of courses) {
+    if (course.categoryId) {
+      const bucket = byCategoryId.get(course.categoryId) ?? [];
+      bucket.push(course);
+      byCategoryId.set(course.categoryId, bucket);
+    } else {
+      uncategorized.push(course);
+    }
+  }
+
+  return {
+    categories: categories.map((category) => ({
+      ...category,
+      courses: byCategoryId.get(category.id) ?? [],
+    })),
+    uncategorized,
+  };
+}
+
+/**
+ * Move a course to a different umbrella category (or null to uncategorize)
+ * from the admin categories page. Admin-only — reordering/reassigning
+ * across instructors is not something an owning instructor gets to do from
+ * this screen (they set a course's category from Studio settings instead).
+ */
+export async function setCourseCategory(
+  principal: Principal,
+  courseId: string,
+  categoryId: string | null,
+) {
+  authorize(principal, { type: "admin:categories" });
+  const course = await db.course.findFirst({
+    where: { id: courseId, deletedAt: null },
+    select: { id: true },
   });
+  if (!course) throw new NotFoundError("Course not found.");
+  if (categoryId) {
+    const category = await db.category.findUnique({ where: { id: categoryId } });
+    if (!category) throw new NotFoundError("Category not found.");
+  }
+  return db.course.update({ where: { id: courseId }, data: { categoryId } });
 }
 
 export async function createCategory(principal: Principal, input: CategoryInput) {

@@ -10,9 +10,11 @@ import {
   updateCategory,
   deleteCategory,
   reorderCategories,
+  listCategoriesWithCourses,
+  setCourseCategory,
 } from "@/server/services/category";
 import { browseCatalogGrouped } from "@/server/services/catalog";
-import { AppError, ConflictError } from "@/server/http";
+import { AppError, ConflictError, NotFoundError } from "@/server/http";
 
 let instructor: Principal;
 let admin: Principal;
@@ -208,5 +210,83 @@ describe("editing and deleting umbrella categories", () => {
     const { groups } = await browseCatalogGrouped();
     const uncategorizedGroup = groups.find((g) => g.category === null);
     expect(uncategorizedGroup?.courses.map((c) => c.id)).toContain(course.id);
+  });
+});
+
+describe("admin course-under-umbrella management", () => {
+  it("lists every non-deleted course under its category, including drafts", async () => {
+    const suffix = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+    const category = await createCategory(admin, { name: `Draft Bucket ${suffix}` });
+    categoryIds.push(category.id);
+    // Unpublished on purpose — the admin management view (unlike the public
+    // catalog) should still surface it under its umbrella.
+    const draft = await createCourse(instructor, {
+      title: `Draft Course ${suffix}`,
+      summary: "Not published yet.",
+      description: "",
+    });
+    courseIds.push(draft.id);
+    await db.course.update({ where: { id: draft.id }, data: { categoryId: category.id } });
+
+    const { categories } = await listCategoriesWithCourses(admin);
+    const group = categories.find((c) => c.id === category.id);
+    expect(group?.courses.map((c) => c.id)).toContain(draft.id);
+    expect(group?.courses.find((c) => c.id === draft.id)?.status).toBe("DRAFT");
+  });
+
+  it("puts courses with no category into the uncategorized bucket", async () => {
+    const suffix = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+    const course = await createCourse(instructor, {
+      title: `No Umbrella Yet ${suffix}`,
+      summary: "Nothing assigned.",
+      description: "",
+    });
+    courseIds.push(course.id);
+
+    const { uncategorized } = await listCategoriesWithCourses(admin);
+    expect(uncategorized.map((c) => c.id)).toContain(course.id);
+  });
+
+  it("moves a course between umbrellas, and back to uncategorized", async () => {
+    const suffix = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+    const from = await createCategory(admin, { name: `From Umbrella ${suffix}` });
+    const to = await createCategory(admin, { name: `To Umbrella ${suffix}` });
+    categoryIds.push(from.id, to.id);
+    const course = await publishedCourse(suffix, `Movable Course ${suffix}`, from.id);
+
+    await setCourseCategory(admin, course.id, to.id);
+    let reloaded = await db.course.findUnique({
+      where: { id: course.id },
+      select: { categoryId: true },
+    });
+    expect(reloaded?.categoryId).toBe(to.id);
+
+    await setCourseCategory(admin, course.id, null);
+    reloaded = await db.course.findUnique({
+      where: { id: course.id },
+      select: { categoryId: true },
+    });
+    expect(reloaded?.categoryId).toBeNull();
+  });
+
+  it("rejects moving a course to a non-existent category", async () => {
+    const suffix = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+    const course = await publishedCourse(suffix, `Bad Move Course ${suffix}`);
+    await expect(
+      setCourseCategory(admin, course.id, "not-a-real-category-id"),
+    ).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it("blocks non-admins from moving a course between umbrellas", async () => {
+    const suffix = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+    const category = await createCategory(admin, { name: `Guarded Move ${suffix}` });
+    categoryIds.push(category.id);
+    const course = await publishedCourse(suffix, `Guarded Course ${suffix}`);
+    await expect(
+      setCourseCategory(instructor, course.id, category.id),
+    ).rejects.toBeInstanceOf(AuthorizationError);
+    await expect(
+      setCourseCategory(student, course.id, category.id),
+    ).rejects.toBeInstanceOf(AuthorizationError);
   });
 });

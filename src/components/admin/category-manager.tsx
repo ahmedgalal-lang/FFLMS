@@ -2,7 +2,19 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, ArrowUp, ArrowDown, Pencil, X, Check } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  ArrowUp,
+  ArrowDown,
+  Pencil,
+  X,
+  Check,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
+import type { CourseStatus } from "@prisma/client";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,17 +22,35 @@ import {
   updateCategoryAction,
   deleteCategoryAction,
   reorderCategoriesAction,
+  setCourseCategoryAction,
 } from "@/app/(admin)/admin/actions";
 
+type CategoryCourse = { id: string; title: string; status: CourseStatus };
 type Category = {
   id: string;
   name: string;
   slug: string;
   description: string | null;
-  _count: { courses: number };
+  courses: CategoryCourse[];
 };
 
-export function CategoryManager({ categories }: { categories: Category[] }) {
+const statusVariant: Record<
+  CourseStatus,
+  "default" | "secondary" | "success" | "warning"
+> = {
+  DRAFT: "secondary",
+  IN_REVIEW: "warning",
+  PUBLISHED: "success",
+  ARCHIVED: "secondary",
+};
+
+export function CategoryManager({
+  categories,
+  uncategorized,
+}: {
+  categories: Category[];
+  uncategorized: CategoryCourse[];
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [name, setName] = useState("");
@@ -28,6 +58,7 @@ export function CategoryManager({ categories }: { categories: Category[] }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   function run(fn: () => Promise<{ error?: string } | undefined>) {
     setError(null);
@@ -69,6 +100,48 @@ export function CategoryManager({ categories }: { categories: Category[] }) {
     });
   }
 
+  function toggleExpanded(id: string) {
+    setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
+  }
+
+  function courseList(courses: CategoryCourse[], currentCategoryId: string | null) {
+    return (
+      <ul className="divide-y border-t bg-muted/30">
+        {courses.map((course) => (
+          <li
+            key={course.id}
+            className="flex items-center justify-between gap-3 py-2 pl-9 pr-3"
+          >
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="truncate text-sm">{course.title}</span>
+              <Badge variant={statusVariant[course.status]}>
+                {course.status.toLowerCase().replace("_", " ")}
+              </Badge>
+            </div>
+            <select
+              value={currentCategoryId ?? ""}
+              aria-label={`Category for ${course.title}`}
+              disabled={pending}
+              className="h-8 shrink-0 rounded-md border border-input bg-background px-2 text-sm"
+              onChange={(e) =>
+                run(() =>
+                  setCourseCategoryAction(course.id, e.target.value || null),
+                )
+              }
+            >
+              <option value="">Uncategorized</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <form
@@ -98,16 +171,16 @@ export function CategoryManager({ categories }: { categories: Category[] }) {
       {categories.length > 0 && (
         <p className="text-xs text-muted-foreground">
           This order controls the section order on the public catalog — first
-          umbrella first.
+          umbrella first. Expand a category to see and move its courses.
         </p>
       )}
-      <ul className="divide-y rounded-lg border">
+      <div className="divide-y rounded-lg border">
         {categories.length === 0 && (
-          <li className="p-4 text-sm text-muted-foreground">No categories yet.</li>
+          <p className="p-4 text-sm text-muted-foreground">No categories yet.</p>
         )}
         {categories.map((c, i) =>
           editingId === c.id ? (
-            <li key={c.id} className="space-y-2 p-3">
+            <div key={c.id} className="space-y-2 p-3">
               <Input
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
@@ -137,60 +210,107 @@ export function CategoryManager({ categories }: { categories: Category[] }) {
                   <Check /> Save
                 </Button>
               </div>
-            </li>
+            </div>
           ) : (
-            <li key={c.id} className="flex items-center justify-between p-3">
-              <div>
-                <span className="font-medium">{c.name}</span>
-                <span className="ml-2 text-xs text-muted-foreground">
-                  {c._count.courses} course{c._count.courses === 1 ? "" : "s"}
-                </span>
-                {c.description && (
-                  <p className="text-xs text-muted-foreground">{c.description}</p>
-                )}
+            <div key={c.id}>
+              <div className="flex items-center justify-between p-3">
+                <button
+                  type="button"
+                  className="flex min-w-0 items-center gap-2 text-left"
+                  onClick={() => toggleExpanded(c.id)}
+                  aria-expanded={!!expanded[c.id]}
+                  aria-label={`${expanded[c.id] ? "Collapse" : "Expand"} ${c.name}`}
+                >
+                  {expanded[c.id] ? (
+                    <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  )}
+                  <span className="min-w-0">
+                    <span className="font-medium">{c.name}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      {c.courses.length} course{c.courses.length === 1 ? "" : "s"}
+                    </span>
+                    {c.description && (
+                      <p className="text-xs text-muted-foreground">{c.description}</p>
+                    )}
+                  </span>
+                </button>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Move ${c.name} up`}
+                    disabled={pending || i === 0}
+                    onClick={() => move(i, -1)}
+                  >
+                    <ArrowUp />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Move ${c.name} down`}
+                    disabled={pending || i === categories.length - 1}
+                    onClick={() => move(i, 1)}
+                  >
+                    <ArrowDown />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Edit ${c.name}`}
+                    disabled={pending}
+                    onClick={() => startEdit(c)}
+                  >
+                    <Pencil />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Delete ${c.name}`}
+                    disabled={pending}
+                    onClick={() => run(() => deleteCategoryAction(c.id))}
+                  >
+                    <Trash2 />
+                  </Button>
+                </div>
               </div>
-              <div className="flex shrink-0 items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Move ${c.name} up`}
-                  disabled={pending || i === 0}
-                  onClick={() => move(i, -1)}
-                >
-                  <ArrowUp />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Move ${c.name} down`}
-                  disabled={pending || i === categories.length - 1}
-                  onClick={() => move(i, 1)}
-                >
-                  <ArrowDown />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Edit ${c.name}`}
-                  disabled={pending}
-                  onClick={() => startEdit(c)}
-                >
-                  <Pencil />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Delete ${c.name}`}
-                  disabled={pending}
-                  onClick={() => run(() => deleteCategoryAction(c.id))}
-                >
-                  <Trash2 />
-                </Button>
-              </div>
-            </li>
+              {expanded[c.id] &&
+                (c.courses.length > 0 ? (
+                  courseList(c.courses, c.id)
+                ) : (
+                  <p className="border-t bg-muted/30 py-2 pl-9 pr-3 text-sm text-muted-foreground">
+                    No courses in this category yet.
+                  </p>
+                ))}
+            </div>
           ),
         )}
-      </ul>
+      </div>
+
+      {uncategorized.length > 0 && (
+        <div className="rounded-lg border">
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 p-3 text-left"
+            onClick={() => toggleExpanded("__uncategorized")}
+            aria-expanded={!!expanded.__uncategorized}
+            aria-label={`${expanded.__uncategorized ? "Collapse" : "Expand"} Uncategorized`}
+          >
+            {expanded.__uncategorized ? (
+              <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+            )}
+            <span className="font-medium">Uncategorized</span>
+            <span className="text-xs text-muted-foreground">
+              {uncategorized.length} course{uncategorized.length === 1 ? "" : "s"} —
+              not assigned to any umbrella yet
+            </span>
+          </button>
+          {expanded.__uncategorized && courseList(uncategorized, null)}
+        </div>
+      )}
     </div>
   );
 }
